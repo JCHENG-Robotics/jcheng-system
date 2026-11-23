@@ -8,6 +8,7 @@
   <license>Proprietary (license review pending; no LICENSE file)</license>
 
   <exec_depend>rclpy</exec_depend>
+  <exec_depend>builtin_interfaces</exec_depend>
   <exec_depend>jcheng_interfaces</exec_depend>
   <exec_depend>jcheng_system_core</exec_depend>
   <exec_depend>jcheng_hardware</exec_depend>

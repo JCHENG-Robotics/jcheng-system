@@ -13,6 +13,7 @@ from pathlib import Path
 import threading
 from typing import Any
 
+from builtin_interfaces.msg import Time
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
@@ -272,8 +273,17 @@ class TelemetryNode(Node):
         safety.violations = list(view.violations)
         safety.config_hash = view.config_hash
         safety.profile_hash = view.profile_hash
-        safety.last_valid_state_at = self.get_clock().now().to_msg()
+        safety.last_valid_state_at = self._stamp_msg(view.last_valid_state_at)
         self._safety_pub.publish(safety)
+
+    def _stamp_msg(self, seconds: float) -> Time:
+        wall = self.clock.t0_wall.timestamp() + float(seconds)
+        sec = int(wall)
+        nanosec = int((wall - sec) * 1e9)
+        if nanosec >= 1_000_000_000:
+            sec += 1
+            nanosec -= 1_000_000_000
+        return Time(sec=sec, nanosec=nanosec)
 
     def _record_evidence(self) -> None:
         if self.evidence is None:
