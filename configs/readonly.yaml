@@ -1,0 +1,31 @@
+schema_version: 1
+mode: readonly
+writes_allowed: 0
+description: "M4 read-only allowlist. Any publish, service call, or device outside this list is a gate failure."
+topics:
+  subscribe:
+    - /controller_manager/joint_states
+    - /ros_robot_controller/battery
+    - /depth_cam/rgb/image_raw
+    - /tf
+    - /tf_static
+  publish:
+    - /jcheng/telemetry/state
+    - /jcheng/telemetry/safety
+services:
+  call:
+    - /ros_robot_controller/bus_servo/get_state
+forbidden:
+  topics:
+    - /servo_controller
+    - /ros_robot_controller/bus_servo/set_position
+    - /ros_robot_controller/set_motor_speeds
+    - /grasp
+    - /move_action
+    - /cmd_vel
+  services:
+    - /ros_robot_controller/bus_servo/set_state
+    - /ros_robot_controller/set_motor_speeds
+  devices:
+    - /dev/tty
+    - /dev/rrc

@@ -2,9 +2,10 @@
 
 JCHENG Robotics 的特权运行时与系统集成点。
 
-> 状态：**v0.1.0 — M3 纯 Mock 系统已完成（2026-11-23）。**
-> 本版本验证安全、租约、仲裁、Mock 硬件、HTTP 网关、guard 与 S1–S17 场景；
-> **不包含 ROS service/action 传输、真实硬件、真实运动或 `LICENSE`。**
+> 状态：**v0.2.0-dev — M4 只读接入实现中（2026-11-23）。**
+> 在 `v0.1.0` Mock 基线之上加入只读遥测、只读硬件桥、只读网关、域配置与
+> M4 门禁；**尚未连接机器人、未发送任何运动命令、未打 M4 标签。**
+> 仍然**不包含运动 service/action 执行、真实运动或 `LICENSE`。**
 
 ## 1. 当前交付
 
@@ -14,11 +15,12 @@ JCHENG Robotics 的特权运行时与系统集成点。
 | `jcheng_safety` | 安全诊断 CLI |
 | `jcheng_authority` | 租约诊断 CLI |
 | `jcheng_motion` | 仲裁器诊断 CLI |
-| `jcheng_hardware` | Mock 硬件状态 CLI |
-| `jcheng_gateway` | HTTP 网关入口 |
+| `jcheng_hardware` | Mock 硬件状态 CLI + 只读总线桥（`readonly.py`） |
+| `jcheng_gateway` | Mock HTTP 网关入口 |
 | `jcheng_guard` | 发布者白名单诊断 |
 | `jcheng_testkit` | S1–S17 场景运行器 |
-| `jcheng_bringup` | `mock_stack.launch.py` |
+| `jcheng_telemetry` | 只读遥测缓存、只读网关、预检、证据、短时探针 |
+| `jcheng_bringup` | `mock_stack.launch.py` + `readonly.launch.py` |
 
 ## 2. 架构（M3）
 
@@ -40,6 +42,24 @@ HTTP client
   `sha256:0b8d72ced7f54d444d6851d8b99a51a78e2bed3f687324f51a15f76557f24b42`。
 - M4 才增加 ROS service/action 传输与域 41/42/43。
 
+### 2.1 M4 只读链路
+
+```text
+厂商节点（域 0）
+  ├─ /controller_manager/joint_states  → truth=commanded
+  ├─ /ros_robot_controller/battery
+  └─ /ros_robot_controller/bus_servo/get_state（GetBusServoState，只读位置）
+        → jcheng_telemetry（域 0）
+            → /jcheng/telemetry/state（RobotState）
+            → /jcheng/telemetry/safety（SafetyState，只读视图）
+            → 127.0.0.1 只读 HTTP 网关（GET only）
+```
+
+- 只发布 `RobotState`/`SafetyState`；没有命令发布者。
+- 只调用 `GetBusServoState`，只设置 `get_position=1`，舵机 ID 1..6 严格递增。
+- 不打开串口/设备；不重启厂商容器；不使能、不租约、不运动。
+- M4 遥测运行在域 0；41/42 配置已准备，域桥接是 M5 的前置条件。
+
 ## 3. 快速开始
 
 ```bash
@@ -47,12 +67,24 @@ source /opt/ros/humble/setup.bash
 colcon build --base-paths ros2_ws/src
 source install/setup.bash
 
-# 16 项契约/场景/网关测试
+# 28 项契约/场景/只读测试（27 pass / 1 conditional skip）
 python3 -m pytest -q
 
 # S1–S17（15 pass / 2 skipped）
 ros2 run jcheng_testkit jcheng_scenarios --root . \
   --out e2e/reports/m3-mock.json
+
+# M4 短时只读探针（Mock；不连接机器人）
+ros2 run jcheng_telemetry jcheng_readonly_probe \
+  --root . --duration-s 3 --interval-s 0.2 \
+  --out e2e/reports/m4-readonly.json \
+  --evidence e2e/reports/m4-readonly.jsonl
+
+# M4 只读节点（实机；需要单独授权；不发送运动）
+# export JCHENG_ROOT="$PWD"
+# export JCHENG_GATEWAY_TOKEN="<secret>"
+# ros2 launch jcheng_bringup readonly.launch.py \
+#   root:="$JCHENG_ROOT" gateway_token:="$JCHENG_GATEWAY_TOKEN"
 
 # Mock HTTP 网关（需要 token；不连接硬件）
 ros2 run jcheng_gateway jcheng_gateway --port 8766 --token "<secret>"
@@ -60,9 +92,13 @@ ros2 run jcheng_gateway jcheng_gateway --port 8766 --token "<secret>"
 ros2 launch jcheng_bringup mock_stack.launch.py token:="<secret>"
 ```
 
-网关端点（核心子集）：`/v1/health`、`/v1/contract`、`/v1/state`、
+Mock 网关端点（核心子集）：`/v1/health`、`/v1/contract`、`/v1/state`、
 `/v1/safety`、`/v1/leases`、`/v1/motion/validate`、`/v1/motion/execute`、
 `/v1/motion/stop`、`/v1/capabilities`、`/v1/events`。
+
+只读网关端点：`/v1/health`、`/v1/contract`、`/v1/state`、`/v1/safety`、
+`/v1/battery`、`/v1/topics`、`/v1/cameras`、`/v1/tf`、`/v1/events`。
+所有非 GET 方法返回 403；没有 motion/lease/arm/reset 路由。
 
 ## 4. 安全边界
 
@@ -71,24 +107,28 @@ ros2 launch jcheng_bringup mock_stack.launch.py token:="<secret>"
   总线失败都会拒绝或锁存。
 - 停止是“软件停止”，不是急停。
 - 平台没有急停/抱闸/独立编码器/自碰撞模型。
-- 任何实机运动仍需单独、明确的现场授权；M3 没有实机动作。
+- M4 只读链路没有命令发布者、没有写服务、没有串口/设备访问。
+- `/controller_manager/joint_states` 只标记 `commanded`，不能作为完成依据。
+- 任何实机运动仍需单独、明确的现场授权；M4 没有实机动作。
 
 ## 5. 验收
 
-- 15 个必选场景通过，2 个按计划跳过；16 项 pytest。
-- `m1-gate`：Mock-only、无 ROS 传输、无硬件访问、无 LICENSE。
-- `m3-mock`：Humble 容器构建 interfaces v0.1.0 + 9 个系统包，运行场景与
-  锁文件远程校验。
-- 报告：`e2e/reports/m3-mock.json`。
+- M3：15 个必选场景通过，2 个按计划跳过；16 项 pytest；`m3-mock` 通过。
+- M4（离线）：28 项 pytest（27 pass / 1 conditional skip）；短时只读探针
+  `writes=0`；`m4-readonly` 构建 10 个系统包并通过只读门禁。
+- M4（实机）：**尚未执行**；需要单独授权后进行 ≥30 分钟只读运行、总线读数
+  对比与域隔离验证。
+- 报告：`e2e/reports/m3-mock.json`、`e2e/reports/m4-readonly.json`。
 
-详见 [M3 范围](docs/M3-SCOPE.md) 与 [验收](docs/ACCEPTANCE.md)。
+详见 [M3 范围](docs/M3-SCOPE.md)、[M4 范围](docs/M4-SCOPE.md) 与
+[验收](docs/ACCEPTANCE.md)。
 
-## 6. M4 方向
+## 6. M4 与后续
 
-1. ROS service/action 服务器复用 Mock 核心。
-2. 只读机器人接入；不写硬件。
-3. 域 41/42/43、SROS2/网络隔离与 `jcheng_guard` 运行时检测。
-4. 实机动作仍需单独授权。
+1. M4 只读链路已实现：遥测、只读桥、只读网关、域配置、预检、证据。
+2. 待实机只读验收：30 分钟、总线对比、域隔离；**不运动**。
+3. M5 才接入 `ExecuteMotion`/租约/安全服务与受监督单关节/夹爪运动。
+4. 任何实机动作仍需单独授权。
 
 ## 7. 许可
 

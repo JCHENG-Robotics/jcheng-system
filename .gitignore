@@ -11,3 +11,4 @@ log/
 *.db-wal
 *.db-shm
 e2e/reports/*.json
+e2e/reports/*.jsonl

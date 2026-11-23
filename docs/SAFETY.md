@@ -1,7 +1,7 @@
-# 安全不变量（M3 实现）
+# 安全不变量（M3/M4 实现）
 
 > 这些不是建议，是后续实现与验收的门槛。M3 已在 Mock 核心中实现并由
-> S1–S16 验证；M4/M5 才接入真实硬件。
+> S1–S16 验证；M4 增加了只读真实接入，**仍不发送任何运动命令**。
 
 ## 1. 唯一入口
 
@@ -54,7 +54,19 @@
 - 底盘开环、无里程计；任何底盘运动使桌面标定失效（S14 标注）。
 - 软件层不能替代断电/物理隔离。
 
-## 8. M3 验证
+## 8. M4 只读不变量
+
+- 只发布 `/jcheng/telemetry/state` 与 `/jcheng/telemetry/safety`；没有命令发布者。
+- 只调用 `GetBusServoState`，只设置 `get_position=1`；舵机 ID 1..6 严格递增；
+  不读 offset/EEPROM/力矩，不写任何寄存器。
+- 不打开 `/dev/tty*`、不导入 `serial`、不访问串口设备。
+- `/controller_manager/joint_states` 只标记 `commanded`；只有新的总线样本标记
+  `measured`，且 `verification=bus`。
+- 只读网关只有 GET；非 GET 在任何路由前返回 403；没有 motion/lease/arm/reset 路由。
+- 只读安全视图只会是 `DISARMED` 或 `STOP_LATCHED`，不是控制权威；不使能、不租约。
+- M4 运行在域 0；域 41/42 配置已准备，但不能把运动节点放进域 0。
+
+## 9. M3 验证
 
 | 场景 | 结果 |
 |---|---|

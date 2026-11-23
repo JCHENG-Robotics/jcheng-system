@@ -1,0 +1,51 @@
+schema_version: 1
+robot: armpi_ultra
+mapping_version: readonly-m4-2026-11-23
+description: "Pulse-to-radian mapping used only for read-only telemetry. It does not grant command authority."
+source: "armpi-debug-studio/configs/joint_mapping.yaml (v1.0.0 baseline)"
+source_sha256: "sha256:b91348739261ab3c4bd1f08f6469fae1622f5e8add89c264697faf4b92a8acae"
+radians_per_tick: 0.004188790204786391
+read_order: [1, 2, 3, 4, 5, 6]
+joints:
+  - name: r_joint
+    kind: gripper
+    servo_id: 1
+    init_raw: 700
+    direction: -1
+    pulse_min: 0
+    pulse_max: 1000
+  - name: joint5
+    kind: arm
+    servo_id: 2
+    init_raw: 500
+    direction: 1
+    pulse_min: 0
+    pulse_max: 1000
+  - name: joint4
+    kind: arm
+    servo_id: 3
+    init_raw: 500
+    direction: 1
+    pulse_min: 0
+    pulse_max: 1000
+  - name: joint3
+    kind: arm
+    servo_id: 4
+    init_raw: 500
+    direction: -1
+    pulse_min: 0
+    pulse_max: 1000
+  - name: joint2
+    kind: arm
+    servo_id: 5
+    init_raw: 500
+    direction: 1
+    pulse_min: 0
+    pulse_max: 1000
+  - name: joint1
+    kind: arm
+    servo_id: 6
+    init_raw: 500
+    direction: 1
+    pulse_min: 0
+    pulse_max: 1000

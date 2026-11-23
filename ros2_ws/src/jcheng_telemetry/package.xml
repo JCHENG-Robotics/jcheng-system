@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>jcheng_telemetry</name>
+  <version>0.1.0</version>
+  <description>Read-only robot telemetry, preflight, and HTTP gateway</description>
+  <maintainer email="chengkewei77@gmail.com">JerichoCheng</maintainer>
+  <license>Proprietary (license review pending; no LICENSE file)</license>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>jcheng_interfaces</exec_depend>
+  <exec_depend>jcheng_system_core</exec_depend>
+  <exec_depend>jcheng_hardware</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>tf2_msgs</exec_depend>
+  <exec_depend>ros_robot_controller_msgs</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>
