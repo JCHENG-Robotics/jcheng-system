@@ -1,7 +1,7 @@
-# M1: single owner until maintainer/operator roles are granted.
-* @JerichoCheng
+# Two-reviewer model (adopted 2026-11-23). Both maintainers can approve.
+* @JerichoCheng @JerichoSwaine
 
 # Safety-critical surfaces require explicit review.
-/docs/SAFETY.md    @JerichoCheng
-/docs/ACCEPTANCE.md @JerichoCheng
-/.github/          @JerichoCheng
+/docs/SAFETY.md    @JerichoCheng @JerichoSwaine
+/docs/ACCEPTANCE.md @JerichoCheng @JerichoSwaine
+/.github/          @JerichoCheng @JerichoSwaine
