@@ -48,6 +48,7 @@ def generate_launch_description():
             ),
             SetEnvironmentVariable("ROS_DOMAIN_ID", domain_id),
             SetEnvironmentVariable("RMW_IMPLEMENTATION", "rmw_cyclonedds_cpp"),
+            SetEnvironmentVariable("JCHENG_GATEWAY_TOKEN", gateway_token),
             Node(
                 package="jcheng_telemetry",
                 executable="jcheng_telemetry_node",
@@ -59,7 +60,6 @@ def generate_launch_description():
                         "root": root,
                         "domain_id": domain_id,
                         "gateway_port": gateway_port,
-                        "gateway_token": gateway_token,
                         "require_bus": require_bus,
                         "bus_service": bus_service,
                         "gateway_host": "127.0.0.1",

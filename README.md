@@ -2,9 +2,9 @@
 
 JCHENG Robotics 的特权运行时与系统集成点。
 
-> 状态：**v0.2.0-dev — M4 只读接入离线完成（2026-11-23）；实机待授权。**
-> 在 `v0.1.0` Mock 基线之上加入只读遥测、只读硬件桥、只读网关、域配置与
-> M4 门禁；**尚未连接机器人、未发送任何运动命令、未打 M4 标签。**
+> 状态：**v0.2.0-dev — M4 实机只读验收通过（2026-11-23）；修复分支待合并。**
+> 实机 30 分钟：1799/1799 样本 `truth=measured`、`writes=0`；
+> **没有发送任何运动命令、没有重启厂商容器、未打 M4 标签。**
 > 仍然**不包含运动 service/action 执行、真实运动或 `LICENSE`。**
 
 ## 1. 当前交付
@@ -116,9 +116,12 @@ Mock 网关端点（核心子集）：`/v1/health`、`/v1/contract`、`/v1/state
 - M3：15 个必选场景通过，2 个按计划跳过；16 项 pytest；`m3-mock` 通过。
 - M4（离线）：28 项 pytest（27 pass / 1 conditional skip）；短时只读探针
   `writes=0`；`m4-readonly` 构建 10 个系统包并通过只读门禁。
-- M4（实机）：**尚未执行**；需要单独授权后进行 ≥30 分钟只读运行、总线读数
-  对比与域隔离验证。
-- 报告：`e2e/reports/m3-mock.json`、`e2e/reports/m4-readonly.json`。
+- M4（实机）：**通过**；30 分钟、1799/1799 `measured`、`writes=0`；
+  独立总线读数与新节点逐项一致；域 42 看不到厂商命令话题。
+- 关键发现：旧网关 `measured` 是命令缓存（`truth=commanded`），与真实总线
+  最大相差 387 pulses；M4 以独立 `GetBusServoState` 读数为准。
+- 报告：`e2e/reports/m3-mock.json`、`e2e/reports/m4-readonly.json`；
+  实机证据：`jcheng-manipulation/docs/ecosystem/evidence/m4-readonly-20261123/`。
 
 详见 [M3 范围](docs/M3-SCOPE.md)、[M4 范围](docs/M4-SCOPE.md) 与
 [验收](docs/ACCEPTANCE.md)。

@@ -10,7 +10,11 @@
 - 新增域 0/41/42/43 配置、CycloneDDS 单播模板、只读允许/禁止列表。
 - 新增 `scripts/check_m3_gate.sh`（冻结 M3 包集）与
   `scripts/check_m4_readonly.sh`（只读门禁）；CI 增加 `m4-readonly`。
-- M4 没有连接机器人、没有发送运动命令；实机 30 分钟只读验收待单独授权。
+- 2026-11-23 实机只读验收通过：30 分钟、1799/1799 `measured`、`writes=0`；
+  独立总线读数与新节点一致；旧网关 `measured` 实为命令缓存，与真实总线
+  最大相差 387 pulses。没有发送任何运动命令。
+- 修复：总线默认 4 Hz；网关 token 改走环境变量；关闭时避免重复
+  `rclpy.shutdown`。修复分支尚未合并到 `main`。
 
 ## 0.1.0 (2026-11-23) — M3 Mock
 
