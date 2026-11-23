@@ -1,0 +1,7 @@
+# M1: single owner until maintainer/operator roles are granted.
+* @JerichoCheng
+
+# Safety-critical surfaces require explicit review.
+/docs/SAFETY.md    @JerichoCheng
+/docs/ACCEPTANCE.md @JerichoCheng
+/.github/          @JerichoCheng

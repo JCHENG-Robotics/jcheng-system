@@ -1,0 +1,21 @@
+name: m1-skeleton
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  m1-gate:
+    name: m1-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: M1 scope gate
+        shell: bash
+        run: bash scripts/check_m1_gate.sh
