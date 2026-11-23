@@ -1,0 +1,26 @@
+schema_version: 1
+release: "2026.11.0-m3"
+channel: dev
+created_at: "2026-11-23T00:00:00Z"
+toolchain:
+  ros_distro: humble
+  ros_image: "ros:humble-ros-base@sha256:dfc94c85d8e01f230951b2a85ca5576e08473081c3da5fbbe8f3ab844703b9ba"
+  python: "3.10"
+  os: ubuntu-22.04
+  colcon: "0.2.x"
+repos:
+  jcheng-interfaces:
+    url: "https://github.com/JCHENG-Robotics/jcheng-interfaces"
+    version: "0.1.0"
+    tag: "v0.1.0"
+    commit: "33f1293bcdcc5c866fbd655232e26a1f3a756006"
+    contract_hash: "sha256:0b8d72ced7f54d444d6851d8b99a51a78e2bed3f687324f51a15f76557f24b42"
+modules: {}
+robot:
+  name: armpi_ultra
+  profile_version: "1.0.0"
+  profile_sha256: "sha256:2098e5e5ece44bca0fd347a6c8a31e536b3cf9d5ff2352ac648290589d1c32ba"
+verification:
+  ci_run: "https://github.com/JCHENG-Robotics/jcheng-system/actions"
+  e2e_report: "e2e/reports/m3-mock.json"
+  hardware_evidence: ""

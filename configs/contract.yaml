@@ -1,0 +1,10 @@
+schema_version: 1
+interfaces:
+  version: 0.1.0
+  tag: v0.1.0
+  commit: 33f1293bcdcc5c866fbd655232e26a1f3a756006
+  contract:
+    major: 0
+    minor: 1
+    patch: 0
+    contract_hash: sha256:0b8d72ced7f54d444d6851d8b99a51a78e2bed3f687324f51a15f76557f24b42

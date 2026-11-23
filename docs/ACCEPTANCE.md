@@ -1,38 +1,42 @@
 # 验收分层
 
-| 层级 | 名称 | 环境 | 实机 | 触发 |
+| 层级 | 名称 | 环境 | 实机 | M3 状态 |
 |---|---|---|---|---|
-| L0 | 契约/静态 | runner | 否 | 每次 PR |
-| L1 | 单元 | runner | 否 | 每次 PR |
-| L2 | Mock 集成 | 域 43 | 否 | 每次 PR |
-| L3 | Mock E2E | 域 43 | 否 | PR + nightly |
-| L4 | 回放 | 域 43 | 否 | nightly/发布 |
-| L5 | 实机 | 域 0/41/42 | 是 | 单独授权、受监督 |
+| L0 | 契约/静态 | runner | 否 | 通过 |
+| L1 | 单元 | runner | 否 | 16 项通过 |
+| L2 | Mock 集成 | 进程内 | 否 | 通过 |
+| L3 | Mock E2E | Mock 网关/总线 | 否 | 通过 |
+| L4 | 回放 | 录制数据 | 否 | S13 M6 |
+| L5 | 实机 | 域 0/41/42 | 是 | 未开始 |
 
-## M1
+## M3 结果
 
-- 只要求 L0 的仓库结构门禁（`m1-gate`）。
-- 没有 Mock 栈、没有单元测试、没有实机。
+- `ros2 run jcheng_testkit jcheng_scenarios --root .`：
+  **15 passed, 2 skipped, 0 failed；required failures 0**。
+- 必选：S1–S12、S14、S15、S16 全部通过。
+- 跳过：S13（M6 回放）、S17（M4/M6 MoveIt）。
+- `pytest`：16 项通过。
+- `verify_lock.py`：interfaces v0.1.0、契约哈希、profile 哈希、远程 tag 一致。
+- CI：Humble `m3-mock` 构建 interfaces + 9 个系统包并运行上述检查。
 
-## M3 起
+## 通过标准（M3）
 
-- S1–S17 场景集（契约握手、租约、停止、未授权发布者、总线失败、回放等）。
-- 零非仲裁器硬件发布者。
-- 安全否决/租约/幂等/停止锁存全部有测试。
+- Mock 场景 required failures 为 0。
+- 零非 `jcheng_hardware` 发布者（S1/S10）。
+- 停止、状态过期、限位、工作空间、桌面、guard、总线失败均拒绝或锁存。
+- 无租约/错误契约/错误 profile 均拒绝。
+- 无实机连接、无真实运动、无硬件写入。
 
-## L5 前提
+## L5 前提（未来）
 
-- Mock E2E 与回放全绿。
+- L0–L4 全绿。
 - 锁文件、契约哈希、profile 哈希一致。
 - 预检通过；操作员与监督人确认。
 - **每次实机运动单独授权。**
 
-## 通过标准
+## 已知限制
 
-- 运动 `COMPLETED` 且 `bus_verified=true`（底盘显式 `open_loop`）。
-- 无 `UNKNOWN`；停止传播 ≤100 ms（目标）。
-- G8 落点在约定门槛内（基线快路径 2.27 mm；门槛待定）。
-- 证据包可被 `evidence-record` Schema 校验。
-- 任何一项失败，M5/M6 不通过。
-
-完整指标见 `jcheng-manipulation/docs/ecosystem/06-ci-cd-acceptance.md`。
+- M3 是 Mock；没有 ROS service/action 传输。
+- 没有急停/抱闸/独立编码器/自碰撞模型。
+- 底盘 `open_loop`，没有里程计。
+- 许可证审查 pending；没有 `LICENSE`。
