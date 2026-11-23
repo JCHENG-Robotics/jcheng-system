@@ -40,6 +40,8 @@
 3. **没有原始设备。** 不打开 `/dev/tty*`、不导入 `serial`、不访问串口。
 4. **总线读取只读位置。** `GetBusServoCmd` 只设置 `id` 与 `get_position=1`；
    不读 offset/EEPROM/力矩；ID 按 1、2、3、4、5、6 严格递增。
+   总线读取默认 **4 Hz**，必须高于 0.5 s 新鲜度阈值的 2 倍；1 Hz 会让
+   `measured` 在每个采样点都已被判过期。
 5. **缓存不是实测。** `/controller_manager/joint_states` 标记
    `truth=commanded`、`verification=timed`；只有新的总线样本标记
    `truth=measured`、`verification=bus`。

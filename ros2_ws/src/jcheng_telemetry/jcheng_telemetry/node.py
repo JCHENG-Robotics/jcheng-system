@@ -58,7 +58,7 @@ class TelemetryNode(Node):
         self.declare_parameter("root", "")
         self.declare_parameter("domain_id", 0)
         self.declare_parameter("bus_service", "/ros_robot_controller/bus_servo/get_state")
-        self.declare_parameter("bus_rate_hz", 1.0)
+        self.declare_parameter("bus_rate_hz", 4.0)
         self.declare_parameter("publish_rate_hz", 10.0)
         self.declare_parameter("require_bus", True)
         self.declare_parameter("gateway_port", 0)
@@ -329,7 +329,10 @@ class TelemetryNode(Node):
 
     def _start_gateway(self) -> None:
         port = int(self.get_parameter("gateway_port").value)
-        token = str(self.get_parameter("gateway_token").value)
+        token = str(
+            self.get_parameter("gateway_token").value
+            or os.environ.get("JCHENG_GATEWAY_TOKEN", "")
+        )
         if port <= 0:
             return
         if not token:
@@ -388,7 +391,8 @@ def main() -> int:
         if node is not None:
             node.shutdown()
             node.destroy_node()
-        rclpy.shutdown()
+        if rclpy.ok():
+            rclpy.shutdown()
     return 0
 
 
