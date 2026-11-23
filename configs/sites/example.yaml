@@ -1,0 +1,6 @@
+schema_version: 1
+site: example
+robot: armpi_ultra
+notes:
+  - Site-specific overlays live outside the repository; this is a schema example.
+  - No credentials, real IPs or site secrets are stored here.

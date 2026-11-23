@@ -10,3 +10,4 @@ log/
 *.db
 *.db-wal
 *.db-shm
+e2e/reports/*.json

@@ -1,0 +1,7 @@
+schema_version: 1
+state_timeout_s: 0.5
+start_state_max_distance_rad: 0.08
+trajectory_max_duration_s: 30.0
+trajectory_max_points: 5000
+arm_confirm_phrase: I_HAVE_A_CLEAR_WORKSPACE_AND_SUPPORT
+reset_confirm_phrase: I_HAVE_VERIFIED_THE_BUS_AND_CLEARED_THE_STOP
