@@ -28,8 +28,20 @@
 - `scripts/check_m4_readonly.sh`：通过；无命令发布者、无写服务、无设备路径。
 - Humble `m4-readonly`：构建 interfaces + 10 个系统包；运行 pytest、短时探针
   与只读门禁。
-- **未连接机器人；未发送任何运动命令。**
-- 实机 M4：**待单独授权**；≥30 分钟只读、总线对比、域隔离尚未执行。
+
+## M4 结果（实机只读，2026-11-23）
+
+- 30 分钟（1798 s）：**1799/1799 样本 `truth=measured`、`verification=bus`，
+  `writes=0`，`ok=true`**。
+- 独立 `GetBusServoState` 读数与新节点逐项一致；旧网关 `measured` 实为
+  `/controller_manager/servo_states (command cache)`，与真实总线最大相差
+  387 pulses。M4 以独立总线读数为准。
+- 域 42 只看到 `/parameter_events`、`/rosout`；看不到厂商命令话题。
+- `/jcheng/telemetry/state` 唯一发布者为 `jcheng_telemetry`；没有命令发布者。
+- 相机 `/depth_cam/rgb/image_raw` 当前无 publisher；`/tf` 健康；
+  `/tf_static` 的 TRANSIENT_LOCAL QoS 尚未适配。
+- **未发送任何运动命令；未重启厂商容器。**
+- 证据：`jcheng-manipulation/docs/ecosystem/evidence/m4-readonly-20261123/`。
 
 ## 通过标准（M3）
 

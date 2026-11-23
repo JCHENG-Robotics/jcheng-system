@@ -83,7 +83,9 @@ export JCHENG_GATEWAY_TOKEN="<secret>"
 export JCHENG_READONLY_EVIDENCE="/tmp/jcheng-m4-readonly.jsonl"
 export ROS_DOMAIN_ID=0
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-export CYCLONEDDS_URI="file://$JCHENG_ROOT/configs/dds/cyclonedds.domain0.xml"
+# On the robot use the vendor DDS file so the vendor state topics are visible.
+# The repository template is for workstation-side domain setup.
+export CYCLONEDDS_URI="file:///home/ubuntu/cyclonedds.xml"
 ros2 launch jcheng_bringup readonly.launch.py \
   root:="$JCHENG_ROOT" \
   gateway_token:="$JCHENG_GATEWAY_TOKEN" \
@@ -104,9 +106,16 @@ curl -s -H "Authorization: Bearer $JCHENG_GATEWAY_TOKEN" \
 - 任何 `POST`/`DELETE` 必须返回 403。
 - 运行 **≥30 分钟**，停止后检查 evidence JSONL 与 `.summary.json`：
   `writes=0`、`measured_samples>0`、无命令发布/写服务。
-- 同一时刻与旧网关脉冲读数比较，容差按脉冲。
+- **旧网关的 `measured` 是命令缓存，不是总线真值。** 用独立
+  `GetBusServoState` 同刻读数对比；2026-11-23 实机上新节点与独立读数
+  逐项一致，旧网关缓存最大差 387 pulses。
 - 能力域进程看不到厂商命令话题（域隔离验证）。
+- 相机 topic 未发布时 `/v1/cameras` 为空；`/tf` 正常；`/tf_static` 需要
+  TRANSIENT_LOCAL 订阅。
 - **全程没有发送任何运动命令。**
+
+2026-11-23 实机结果：30 分钟、1799/1799 `measured`、`writes=0`、`ok=true`；
+证据见 `jcheng-manipulation/docs/ecosystem/evidence/m4-readonly-20261123/`。
 
 ## 7. 实机运动
 
