@@ -59,15 +59,15 @@
 
 ## 4. 明确不做
 
-- 不实现 `rclpy`/`rclcpp` 节点、ROS service/action 传输（M4）。
+- 不实现 `rclpy`/`rclcpp` 节点、ROS service/action 传输（M5）。
 - 不连接机器人、不打开串口、不发布厂商话题。
 - 不实现真实 MoveIt 执行、真实总线、真实底盘。
 - 不添加 `LICENSE`；许可证审查仍为 pending。
 
-## 5. M4 入口
+## 5. M4 入口（实际执行）
 
-1. 在 `jcheng_safety`/`jcheng_authority`/`jcheng_motion` 上增加 ROS 2
-   service/action 服务器，复用 `jcheng_system_core`。
-2. `jcheng_hardware` 接入只读遥测；仍不写硬件。
-3. 加入域 41/42/43 配置与 SROS2/网络隔离。
-4. 任何真实运动仍需要单独授权；M4 只读。
+1. M4 先做只读接入：`jcheng_telemetry`、只读 `jcheng_hardware` 桥、只读网关、
+   域 0/41/42/43 配置与预检。
+2. ROS service/action 运动传输不在 M4；留到 M5 的受监督运动阶段。
+3. 实机只读 30 分钟、总线对比与域隔离验证仍需单独授权。
+4. 任何真实运动仍需要单独、明确的现场授权。

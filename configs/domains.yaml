@@ -1,0 +1,38 @@
+schema_version: 1
+mode: readonly
+description: "M4 domain plan. Read-only telemetry runs in the vendor domain; capability and privileged domains are staged for M5."
+domains:
+  vendor: 0
+  privileged: 41
+  capability: 42
+  simulation: 43
+processes:
+  jcheng_hardware: [0, 41]
+  jcheng_telemetry: [0, 41]
+  jcheng_safety: [41]
+  jcheng_authority: [42]
+  jcheng_motion_frontend: [42]
+  jcheng_motion_executor: [41]
+  jcheng_gateway: [42]
+  jcheng_guard: [0, 41]
+  jcheng_bringup: [0, 41, 42]
+  jcheng_testkit: [43]
+isolation:
+  capability_allowed_domains: [42]
+  privileged_allowed_domains: [0, 41]
+  simulation_allowed_domains: [43]
+  forbid_domain_override: true
+dds:
+  middleware: cyclonedds
+  config_dir: configs/dds
+  profiles:
+    vendor: cyclonedds.domain0.xml
+    privileged: cyclonedds.domain41.xml
+    capability: cyclonedds.domain42.xml
+    simulation: cyclonedds.domain43.xml
+readonly:
+  enabled: true
+  writes_allowed: 0
+  require_bus_measurement: true
+  max_state_age_s: 0.5
+  max_clock_offset_ms: 50
