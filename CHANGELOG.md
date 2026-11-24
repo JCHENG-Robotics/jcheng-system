@@ -21,7 +21,7 @@
 - 新增 `jcheng_vendor` 与 `motion_vendor.launch.py`：唯一 `/servo_controller`
   发布者、单关节/夹爪、`GetBusServoState` 复核、停止锁存/保持。
 - 2026-11-24 实机：joint1 +0.05 rad `COMPLETED`（505 vs 512，7 pulses）；
-  夹爪开 183/170（差 13）、闭 620/640（差 20），两次 `UNKNOWN` 锁存。
+  夹爪 170→183、194→207、640→620/619，三次 `UNKNOWN` 锁存。
   未自动重试；M5.2 未完成，需人工检查夹爪开/闭限位、连杆、伺服 horn
   后再授权。
 
