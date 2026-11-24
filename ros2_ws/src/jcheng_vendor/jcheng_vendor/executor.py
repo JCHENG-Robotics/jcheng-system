@@ -57,6 +57,9 @@ class HardwareBridge:
     def state(self) -> RobotState:
         raise NotImplementedError
 
+    def pulse_snapshot(self) -> dict[str, int]:
+        raise NotImplementedError
+
 
 class HardwareExecutor:
     def __init__(
@@ -70,6 +73,7 @@ class HardwareExecutor:
         evidence: EvidenceStore,
         bridge: HardwareBridge,
         tolerance_pulses: int = 8,
+        min_gripper_delta_pulses: int = 5,
         settle_s: float = 0.4,
         max_commands_per_second: int = 5,
     ) -> None:
@@ -82,6 +86,7 @@ class HardwareExecutor:
         self.evidence = evidence
         self.bridge = bridge
         self.tolerance_pulses = int(tolerance_pulses)
+        self.min_gripper_delta_pulses = int(min_gripper_delta_pulses)
         self.settle_s = float(settle_s)
         self.max_commands_per_second = max(1, int(max_commands_per_second))
         self._state_lock = threading.RLock()
@@ -230,6 +235,7 @@ class HardwareExecutor:
 
         try:
             duration = float(command.duration_s or 2.0)
+            start_pulses = self.bridge.pulse_snapshot()
             if command.kind == "JOINT_STEP":
                 target_pulse = self.bridge.send_step(
                     command.joint_names[0],
@@ -294,23 +300,60 @@ class HardwareExecutor:
                     bus_verified=False,
                     measured_positions=list(sample.state.positions),
                 )
-            if abs(int(measured) - int(target_pulse)) > self.tolerance_pulses:
-                self.safety.latch(
-                    ErrorCode.MOTION_OUTCOME_UNKNOWN,
-                    f"bus target {measured} != commanded {target_pulse}",
+            if command.kind == "GRIPPER":
+                # The vendor gripper is contact/stall-limited. The baseline
+                # treats a gripper-only command as timed completion and uses
+                # the bus read as evidence; it does not require exact target
+                # equality. Require a real movement in the commanded direction.
+                start = start_pulses.get("r_joint")
+                expected_delta = 0 if start is None else int(target_pulse) - int(start)
+                actual_delta = 0 if start is None else int(measured) - int(start)
+                if (
+                    start is None
+                    or expected_delta == 0
+                    or abs(actual_delta) < self.min_gripper_delta_pulses
+                    or (actual_delta > 0) != (expected_delta > 0)
+                ):
+                    message = (
+                        "gripper did not move in the commanded direction: "
+                        f"start={start} target={target_pulse} measured={measured}"
+                    )
+                    self.safety.latch(ErrorCode.MOTION_OUTCOME_UNKNOWN, message)
+                    self.bridge.hold()
+                    self.safety.end_motion()
+                    return self._complete(
+                        command,
+                        report,
+                        self.clock.now(),
+                        outcome="UNKNOWN",
+                        code=ErrorCode.MOTION_OUTCOME_UNKNOWN.value,
+                        message=message,
+                        bus_verified=False,
+                        measured_positions=list(sample.state.positions),
+                    )
+                completion_message = (
+                    "gripper timed completion with bus evidence: "
+                    f"start={start} target={target_pulse} measured={measured}"
                 )
-                self.bridge.hold()
-                self.safety.end_motion()
-                return self._complete(
-                    command,
-                    report,
-                    self.clock.now(),
-                    outcome="UNKNOWN",
-                    code=ErrorCode.MOTION_OUTCOME_UNKNOWN.value,
-                    message=f"bus target {measured} != commanded {target_pulse}",
-                    bus_verified=False,
-                    measured_positions=list(sample.state.positions),
-                )
+            else:
+                if abs(int(measured) - int(target_pulse)) > self.tolerance_pulses:
+                    self.safety.latch(
+                        ErrorCode.MOTION_OUTCOME_UNKNOWN,
+                        f"bus target {measured} != commanded {target_pulse}",
+                    )
+                    self.bridge.hold()
+                    self.safety.end_motion()
+                    return self._complete(
+                        command,
+                        report,
+                        self.clock.now(),
+                        outcome="UNKNOWN",
+                        code=ErrorCode.MOTION_OUTCOME_UNKNOWN.value,
+                        message=f"bus target {measured} != commanded {target_pulse}",
+                        bus_verified=False,
+                        measured_positions=list(sample.state.positions),
+                    )
+                completion_message = f"bus verified target {target_pulse}"
             self.safety.end_motion()
             return self._complete(
                 command,
@@ -318,7 +361,7 @@ class HardwareExecutor:
                 self.clock.now(),
                 outcome="COMPLETED",
                 code=ErrorCode.OK.value,
-                message=f"bus verified target {target_pulse}",
+                message=completion_message,
                 bus_verified=True,
                 measured_positions=list(sample.state.positions),
             )

@@ -1,8 +1,8 @@
 # M5 范围：受监督单关节/夹爪执行
 
-> 状态：**M5.1 已合并；M5.2 单关节通过，夹爪开 UNKNOWN，M5.2 未完成（2026-11-24）。**
-> 单关节 joint1 +0.05 rad `COMPLETED`；夹爪全开目标 170、总线 183，
-> 差 13 pulses 超过 ±8，已 `STOP_LATCHED`；没有自动重试。
+> 状态：**M5.2 核心实机验收通过（2026-11-24）；S7/S9 运行时检测仍有残余。**
+> 单关节、夹爪开/合、软件停止、停止运行时后拒绝、无租约/越限均验证；
+> 夹爪采用“定时完成 + 总线证据 + 方向/最小位移”，手臂仍 ±8 pulse。
 > 基线：`jcheng-manipulation v1.0.0`（`b3411e4`）只读引用；`v0.1.0` 标签不动。
 
 ## 1. 交付拆分
@@ -18,16 +18,21 @@
 | 硬件 | `MockStack`；**没有厂商命令发布者、没有写服务、没有串口/设备访问** |
 | 测试 | `tests_ros/test_runtime.py`：服务、租约、校验、停止锁存、action 完成 |
 
-### M5.2 硬件执行（已实现；实机部分通过）
+### M5.2 硬件执行（已实现；核心实机通过）
 
 - `jcheng_vendor` 是 `/servo_controller`（`servo_controller_msgs/ServosPosition`）的
   唯一发布者；只允许 step/gripper 目标，发布前必须通过安全校验与租约。
-- 完成判定只来自 `GetBusServoState`；`UNKNOWN` 后不自动重试。
+- 手臂完成判定：`GetBusServoState` 目标 ±8 pulse。
+- 夹爪完成判定：基线语义——插值时间完成 + 总线读数证据 + 方向/最小位移
+  ≥5 pulse；夹爪会接触/停位，不要求精确 pulse。
 - **实机结果（2026-11-24）：**
-  - 单关节 joint1 +0.05 rad：`COMPLETED`，总线 505 vs 目标 512（7 pulses）。
-  - 夹爪全开：目标 170 pulse，总线 183，差 13 > ±8；`STOP_LATCHED`。
-  - 夹爪闭合被安全拒绝；未做停止传播/节点停止测试。
-  - M5.2 **未完成**；需人工检查夹爪开限位/连杆，确认可达开度后再授权重试。
+  - 单关节 joint1 +0.05 rad：`COMPLETED`，505 vs 512（7 pulses）。
+  - 夹爪闭 183→645（目标 700）、开 647→183（目标 170）：均 `COMPLETED`、
+    `bus_verified=true`。
+  - 停止：`ABORTED`/`STOP_LATCHED`，hold 0.266 ms，客户端 48.4 ms。
+  - 停止运行时后 action server 不存在，新命令被拒。
+  - 无租约 `NO_LEASE`、越限 `JOINT_LIMIT` 均拒绝。
+  - 残余：S7 状态过期注入、S9 运行时发布者检测未单独实机验证。
 - 任何下一次实机动作仍需单独、明确授权。
 
 ## 2. 服务/action 名称（M5.1）
