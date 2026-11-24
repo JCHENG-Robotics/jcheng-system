@@ -158,7 +158,9 @@ class HardwareExecutor:
             completed_at=now,
         )
         with self._evidence_lock:
-            result.evidence_id = self.evidence.record_motion(command, report, result)
+            result.evidence_id = self.evidence.record_motion(
+                command, report, result, operator="operator"
+            )
         self._idempotency[command.idempotency_key] = (command.payload_hash(), result)
         return result
 

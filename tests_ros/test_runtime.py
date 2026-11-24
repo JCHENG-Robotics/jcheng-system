@@ -155,7 +155,7 @@ def test_execute_action_completes_with_bus_verification(runtime: RuntimeNode) ->
             self.succeeded = False
 
         def publish_feedback(self, feedback) -> None:
-            self.feedback.append(feedback.phase)
+            self.feedback.append(feedback.feedback.phase)
 
         def succeed(self) -> None:
             self.succeeded = True

@@ -88,7 +88,7 @@ class VendorRuntimeNode(Node):
             bus_service=str(self.get_parameter("bus_service").value),
             command_topic=str(self.get_parameter("command_topic").value),
         )
-        self.executor = HardwareExecutor(
+        self.motion_executor = HardwareExecutor(
             profile=self.profile,
             contract=self.contract.version,
             clock=self.clock,
@@ -279,7 +279,7 @@ class VendorRuntimeNode(Node):
     def _validate(self, request: ValidateMotion.Request, response: ValidateMotion.Response):
         command = command_to_core(request.command)
         with self._lock:
-            report = self.executor.validate(command)
+            report = self.motion_executor.validate(command)
         response.approved = bool(report.approved)
         response.reason_code = str(report.reason_code)
         response.violations = list(report.violations)
@@ -314,8 +314,8 @@ class VendorRuntimeNode(Node):
         return response
 
     def _disarm(self, request: DisarmSystem.Request, response: DisarmSystem.Response):
-        if self.executor.active:
-            self.executor.stop(str(request.operator_id), str(request.reason))
+        if self.motion_executor.active:
+            self.motion_executor.stop(str(request.operator_id), str(request.reason))
             response.disarmed = False
             response.safety = safety_to_msg(self.safety.current_state(), self.clock)
             response.message = "active motion stopped and latched; reset required"
@@ -332,7 +332,7 @@ class VendorRuntimeNode(Node):
         return response
 
     def _reset(self, request: ResetSafety.Request, response: ResetSafety.Response):
-        if self.executor.active:
+        if self.motion_executor.active:
             response.accepted = False
             response.safety = safety_to_msg(self.safety.current_state(), self.clock)
             response.message = "cannot reset while motion is active; stop first"
@@ -387,7 +387,7 @@ class VendorRuntimeNode(Node):
         return GoalResponse.ACCEPT
 
     def _cancel(self, goal_handle) -> CancelResponse:
-        self.executor.stop("action_cancel", "action goal cancelled")
+        self.motion_executor.stop("action_cancel", "action goal cancelled")
         return CancelResponse.ACCEPT
 
     def _feedback(self, goal_handle, phase: str, progress: float) -> None:
@@ -398,13 +398,15 @@ class VendorRuntimeNode(Node):
         feedback.measured_positions = list(self.bridge.state().positions)
         feedback.bus_verified = False
         feedback.stamp = ros_time(self.clock, self.clock.now())
-        goal_handle.publish_feedback(feedback)
+        wrapper = ExecuteMotion.Feedback()
+        wrapper.feedback = feedback
+        goal_handle.publish_feedback(wrapper)
 
     def _execute(self, goal_handle):
         command = command_to_core(goal_handle.request.command)
         self._feedback(goal_handle, "VALIDATING", 0.0)
         self._feedback(goal_handle, "EXECUTING", 0.1)
-        result = self.executor.execute(command)
+        result = self.motion_executor.execute(command)
         self._feedback(goal_handle, "VERIFYING", 0.9)
         if result.outcome == "COMPLETED":
             goal_handle.succeed()
@@ -432,15 +434,15 @@ class VendorRuntimeNode(Node):
     def _on_safety_stop(self, msg: Bool) -> None:
         if not msg.data:
             return
-        self.executor.stop("safety_stop", "external /safety_stop")
+        self.motion_executor.stop("safety_stop", "external /safety_stop")
         self._publish_safety()
         self.get_logger().warning(
-            f"STOP_LATCHED; hold latency {self.executor.last_stop_latency_ms} ms"
+            f"STOP_LATCHED; hold latency {self.motion_executor.last_stop_latency_ms} ms"
         )
 
     def _tick(self) -> None:
         with self._lock:
-            self.executor.tick()
+            self.motion_executor.tick()
         self._publish_safety()
 
 
