@@ -17,6 +17,9 @@ for f in \
   README.md \
   VERSION \
   CHANGELOG.md \
+  README.zh-CN.md \
+  ROADMAP.md \
+  ACCEPTANCE.md \
   LICENSE-REVIEW.md \
   pytest.ini \
   configs/contract.yaml \

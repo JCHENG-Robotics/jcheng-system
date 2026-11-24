@@ -1,50 +1,64 @@
 # Changelog
 
-## Unreleased — M4 read-only + M5.1 Mock ROS transport
+All notable changes to this project are documented here. Format based on
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project follows
+[Semantic Versioning](https://semver.org/).
 
-- 新增 `jcheng_hardware/readonly.py`：递增舵机 ID、0–1000 脉冲校验、
-  无 publish/write API 的只读总线桥。
-- 新增 `jcheng_telemetry`：遥测缓存、`measured/commanded` 区分、只读安全视图、
-  只读 HTTP 网关、预检、证据与短时 Mock 探针。
-- 新增 `readonly.launch.py`：只启动 telemetry 节点；不启动厂商容器或运动节点。
-- 新增域 0/41/42/43 配置、CycloneDDS 单播模板、只读允许/禁止列表。
-- 新增 `scripts/check_m3_gate.sh`（冻结 M3 包集）与
-  `scripts/check_m4_readonly.sh`（只读门禁）；CI 增加 `m4-readonly`。
-- 2026-11-23 实机只读验收通过：30 分钟、1799/1799 `measured`、`writes=0`；
-  独立总线读数与新节点一致；旧网关 `measured` 实为命令缓存，与真实总线
-  最大相差 387 pulses。没有发送任何运动命令。
-- 修复：总线默认 4 Hz；网关 token 改走环境变量；关闭时避免重复
-  `rclpy.shutdown`。
-- 新增 `jcheng_runtime`：M5.1 ROS 服务/action 传输，租约、安全、校验、
-  停止锁存；只使用 `MockStack`，没有厂商命令发布者。
-- 新增 `tests_ros` 5 项与 `scripts/check_m5_mock.sh`；CI 增加 `m5-mock`。
-- 新增 `jcheng_vendor` 与 `motion_vendor.launch.py`：唯一 `/servo_controller`
-  发布者、单关节/夹爪、`GetBusServoState` 复核、停止锁存/保持。
-- 2026-11-24 实机：joint1 +0.05 rad `COMPLETED`（505 vs 512，7 pulses）；
-  夹爪闭 183→645、开 647→183，均 `COMPLETED`/`bus_verified`。
-- 修复夹爪完成语义：基线定义为定时完成 + 总线证据 + 方向/最小位移，
-  不要求精确 pulse；手臂仍保持 ±8 pulse。
-- 停止：`ABORTED`/`STOP_LATCHED`，hold 0.266 ms；停止运行时后 action server
-  不存在；无租约/越限拒绝。S7/S9 运行时检测仍有残余。
-- M6 S13：新增 `tools/replay_g8.py` 与 `tests/test_replay.py`；
-  v1.0.0 G8 回放 21/21 decision 一致。仅决策回放，无运动。
-- M6 S17：新增 `jcheng_moveit` plan-only goal 构建/校验；
-  拒绝 execute/trajectory；正反测试通过。真实 MoveIt 验证待做。
-- M6 待完成：真实 MoveIt plan-only、S14 实机底盘、G8 全流程；需单独授权。
+## [Unreleased]
 
-## 0.1.0 (2026-11-23) — M3 Mock
+### Added
 
-- 建立纯 Python `jcheng_system_core`：安全状态机、租约、仲裁、Mock 硬件、
-  guard、HTTP 网关、证据与 S1–S17 场景。
-- 建立 9 个 ROS 包：core、safety、authority、motion、hardware、gateway、
-  guard、testkit、bringup。
-- 15 个 M3 场景通过，2 个按计划跳过；16 项 pytest。
-- 建立 `locks/ecosystem.lock.yaml` 与 `verify_lock.py`，固定 interfaces v0.1.0。
-- 建立 Humble `m3-mock` CI 与 Mock-only 仓库门禁。
-- 不包含 ROS service/action 传输、真实硬件、真实运动或 LICENSE。
+- `jcheng_hardware/readonly.py`: a read-only bus bridge with strictly
+  increasing servo IDs, 0–1000 pulse validation and no publish/write API.
+- `jcheng_telemetry`: telemetry cache with a `measured`/`commanded`
+  distinction, read-only safety view, read-only HTTP gateway, preflight,
+  evidence and a short mock probe.
+- `readonly.launch.py`: starts only the telemetry node; no vendor container or
+  motion node.
+- Domain 0/41/42/43 configuration, CycloneDDS unicast templates and read-only
+  allow/deny lists.
+- `scripts/check_m3_gate.sh` (frozen M3 package set) and
+  `scripts/check_m4_readonly.sh`; CI job `m4-readonly`.
+- `jcheng_runtime`: M5.1 ROS service/action transport with lease, safety,
+  validation and stop latch; uses `MockStack` only.
+- `tests_ros` (5 tests) and `scripts/check_m5_mock.sh`; CI job `m5-mock`.
+- `jcheng_vendor` and `motion_vendor.launch.py`: the single `/servo_controller`
+  publisher, single-joint/gripper execution, `GetBusServoState` verification and
+  stop latch/hold.
+- `jcheng_moveit` plan-only goal construction/validation (M6 S17), rejecting
+  execute/trajectory requests.
+- `tools/replay_g8.py` and `tests/test_replay.py` (M6 S13).
 
-## 版本规则
+### Changed
 
-系统版本与契约版本分离；`major` 表示 API/租约/安全语义不兼容，
-`minor` 表示新增能力/profile，`patch` 表示缺陷/文档修复。
-详见设计文档 `05-versioning-lock-release.md`。
+- Gripper completion now follows the baseline semantics: timed completion plus
+  bus evidence plus direction/minimum displacement, without an exact pulse
+  requirement; the arm keeps the ±8 pulse tolerance.
+- The bus default rate is 4 Hz; the gateway token is read from the environment;
+  shutdown no longer calls `rclpy.shutdown` twice.
+
+### Fixed
+
+- The previous gateway's `measured` field was a command cache
+  (`/controller_manager/servo_states`) and differed from the real bus by up to
+  387 pulses; the read-only path now uses an independent `GetBusServoState`
+  read.
+
+## [0.1.0] — 2026-11-23
+
+M3 mock stack.
+
+### Added
+
+- Pure-Python `jcheng_system_core`: safety state machine, leases, arbitration,
+  mock hardware, guard, HTTP gateway, evidence and S1–S17 scenarios.
+- Nine ROS packages: core, safety, authority, motion, hardware, gateway, guard,
+  testkit and bringup.
+- `locks/ecosystem.lock.yaml` and `verify_lock.py`, pinning interfaces v0.1.0.
+- Humble `m3-mock` CI and a mock-only repository gate.
+
+## Version policy
+
+The system version is independent of the contract version. `major` signals an
+incompatible API/lease/safety change, `minor` a new capability or profile, and
+`patch` a defect or documentation fix.
