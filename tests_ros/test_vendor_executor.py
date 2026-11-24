@@ -26,6 +26,7 @@ class FakeBridge:
         self.pulses["r_joint"] = 170
         self.hold_called = False
         self.sent: list[tuple[str, int]] = []
+        self.gripper_actual_offset = 0
 
     def _pulse(self, joint_name: str, radians: float) -> int:
         joint = next(joint for joint in self.mapping.joints if joint.name == joint_name)
@@ -61,9 +62,13 @@ class FakeBridge:
 
     def send_gripper(self, target_rad: float, duration_s: float) -> int:
         pulse = self._pulse("r_joint", target_rad)
-        self.pulses["r_joint"] = pulse
+        actual = max(0, min(1000, pulse + int(self.gripper_actual_offset)))
+        self.pulses["r_joint"] = actual
         self.sent.append(("r_joint", pulse))
         return pulse
+
+    def pulse_snapshot(self) -> dict[str, int]:
+        return dict(self.pulses)
 
     def hold(self) -> None:
         self.hold_called = True
@@ -103,7 +108,7 @@ def _executor(root: Path):
     return profile, contract, clock, safety, authority, bridge, executor
 
 
-def _arm_and_lease(profile, contract, safety, authority):
+def _arm_and_lease(profile, contract, safety, authority, scope: str = "arm"):
     safety.arm(
         operator_id="pytest",
         checklist_hash="checklist",
@@ -113,12 +118,34 @@ def _arm_and_lease(profile, contract, safety, authority):
     )
     return authority.acquire(
         holder="pytest",
-        scope="arm",
+        scope=scope,
         mode="exclusive",
         priority=100,
         ttl_ms=30_000,
         deadman_required=False,
         contract=contract.version,
+    )
+
+
+def _gripper(contract, lease_id: str, position_rad: float) -> MotionCommand:
+    return MotionCommand.from_dict(
+        {
+            "intent_id": "intent-gripper",
+            "idempotency_key": "idem-gripper",
+            "lease_id": lease_id,
+            "source": "pytest",
+            "kind": "GRIPPER",
+            "profile": "gripper",
+            "contract": contract.version.to_dict(),
+            "gripper": {
+                "position_rad": position_rad,
+                "max_velocity_rad_s": 0.5,
+                "duration_s": 2.0,
+                "verify_bus": True,
+            },
+            "verify_bus": True,
+            "require_measured_state": True,
+        }
     )
 
 
@@ -151,6 +178,19 @@ def test_executor_completes_step_with_bus_verification(root: Path) -> None:
     assert result.bus_verified is True
     assert bridge.pulses["joint1"] == 512
     assert result.measured_positions[0] == pytest.approx(0.05, abs=1e-3)
+
+
+def test_gripper_stall_is_timed_completion_with_bus_evidence(root: Path) -> None:
+    profile, contract, clock, safety, authority, bridge, executor = _executor(root)
+    bridge.pulses["r_joint"] = 216
+    bridge.gripper_actual_offset = 13  # target 170 -> actual 183
+    safety.update_state(bridge.state())
+    lease = _arm_and_lease(profile, contract, safety, authority, scope="gripper")
+    result = executor.execute(_gripper(contract, lease.lease_id, 2.22))
+    assert result.outcome == "COMPLETED"
+    assert result.bus_verified is True
+    assert "gripper timed completion" in result.message
+    assert bridge.pulses["r_joint"] == 183
 
 
 def test_executor_stop_holds_and_aborts(root: Path) -> None:

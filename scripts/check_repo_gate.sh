@@ -17,6 +17,9 @@ for f in \
   README.md \
   VERSION \
   CHANGELOG.md \
+  README.zh-CN.md \
+  ROADMAP.md \
+  ACCEPTANCE.md \
   LICENSE-REVIEW.md \
   pytest.ini \
   configs/contract.yaml \
@@ -33,11 +36,15 @@ for f in \
   docs/M3-SCOPE.md \
   docs/M4-SCOPE.md \
   docs/M5-SCOPE.md \
+  docs/M6-SCOPE.md \
   tools/verify_lock.py \
+  tools/replay_g8.py \
   scripts/check_m3_gate.sh \
   scripts/check_m4_readonly.sh \
   scripts/check_m5_mock.sh \
   scripts/check_m5_vendor.sh \
+  scripts/check_m6_replay.sh \
+  scripts/check_m6_moveit.sh \
   .github/workflows/ci.yml \
   .github/CODEOWNERS
 do
@@ -56,7 +63,8 @@ for pkg in \
   jcheng_testkit \
   jcheng_telemetry \
   jcheng_runtime \
-  jcheng_vendor
+  jcheng_vendor \
+  jcheng_moveit
 do
   require_file "ros2_ws/src/${pkg}/package.xml"
 done
@@ -84,4 +92,4 @@ if [[ "$fail" -ne 0 ]]; then
   echo "Repository gate FAILED" >&2
   exit 1
 fi
-echo "Repository gate OK: structure, 12 packages, no LICENSE, no secret material"
+echo "Repository gate OK: structure, 13 packages, no LICENSE, no secret material"

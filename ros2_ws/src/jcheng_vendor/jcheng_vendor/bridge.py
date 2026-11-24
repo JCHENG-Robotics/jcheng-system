@@ -182,6 +182,10 @@ class VendorBridge:
         ]
         self._publish(entries, 0.02)
 
+    def pulse_snapshot(self) -> dict[str, int]:
+        with self._publish_lock:
+            return dict(self._pulses)
+
     def health(self) -> dict[str, Any]:
         return {
             "mode": "vendor-readonly-command",
