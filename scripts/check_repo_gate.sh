@@ -33,11 +33,14 @@ for f in \
   docs/M3-SCOPE.md \
   docs/M4-SCOPE.md \
   docs/M5-SCOPE.md \
+  docs/M6-SCOPE.md \
   tools/verify_lock.py \
+  tools/replay_g8.py \
   scripts/check_m3_gate.sh \
   scripts/check_m4_readonly.sh \
   scripts/check_m5_mock.sh \
   scripts/check_m5_vendor.sh \
+  scripts/check_m6_replay.sh \
   .github/workflows/ci.yml \
   .github/CODEOWNERS
 do
