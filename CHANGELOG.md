@@ -21,8 +21,11 @@
 - 新增 `jcheng_vendor` 与 `motion_vendor.launch.py`：唯一 `/servo_controller`
   发布者、单关节/夹爪、`GetBusServoState` 复核、停止锁存/保持。
 - 2026-11-24 实机：joint1 +0.05 rad `COMPLETED`（505 vs 512，7 pulses）；
-  夹爪全开目标 170、总线 183（差 13 > ±8），`UNKNOWN` 锁存，闭合被拒。
-  未自动重试；M5.2 未完成，需人工检查夹爪开限位/连杆后再授权。
+  夹爪闭 183→645、开 647→183，均 `COMPLETED`/`bus_verified`。
+- 修复夹爪完成语义：基线定义为定时完成 + 总线证据 + 方向/最小位移，
+  不要求精确 pulse；手臂仍保持 ±8 pulse。
+- 停止：`ABORTED`/`STOP_LATCHED`，hold 0.266 ms；停止运行时后 action server
+  不存在；无租约/越限拒绝。S7/S9 运行时检测仍有残余。
 
 ## 0.1.0 (2026-11-23) — M3 Mock
 
