@@ -74,7 +74,9 @@
 - 越限差异仅为 profile 四位小数与基线精确值差（最大 5.9e-5 rad）；
   回放边界归一化 ≤1e-3 rad 并记录，未修改运行时安全校验。
 - `tests/test_replay.py`：合成 valid/invalid 用例通过。
-- **未执行运动**；S17 MoveIt 只规划、S14 实机底盘、G8 实机待授权。
+- `jcheng_moveit/plan_only.py`：构造/校验 `plan_only=true`，拒绝 execute/trajectory；
+  `tests/test_moveit_plan_only.py` 通过。
+- **未执行运动**；真实 MoveIt plan-only、S14 实机底盘、G8 实机待授权。
 
 ## 通过标准（M3）
 

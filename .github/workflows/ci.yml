@@ -295,8 +295,9 @@ jobs:
       - name: Install test dependencies
         shell: bash
         run: python3 -m pip install --no-cache-dir 'pytest==8.3.4' 'PyYAML==6.0.2'
-      - name: S13 replay tests
+      - name: S13 replay and S17 plan-only tests
         shell: bash
         run: |
-          python3 -m pytest -q tests/test_replay.py
+          python3 -m pytest -q tests/test_replay.py tests/test_moveit_plan_only.py
           bash scripts/check_m6_replay.sh
+          bash scripts/check_m6_moveit.sh

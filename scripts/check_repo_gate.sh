@@ -41,6 +41,7 @@ for f in \
   scripts/check_m5_mock.sh \
   scripts/check_m5_vendor.sh \
   scripts/check_m6_replay.sh \
+  scripts/check_m6_moveit.sh \
   .github/workflows/ci.yml \
   .github/CODEOWNERS
 do
@@ -59,7 +60,8 @@ for pkg in \
   jcheng_testkit \
   jcheng_telemetry \
   jcheng_runtime \
-  jcheng_vendor
+  jcheng_vendor \
+  jcheng_moveit
 do
   require_file "ros2_ws/src/${pkg}/package.xml"
 done
@@ -87,4 +89,4 @@ if [[ "$fail" -ne 0 ]]; then
   echo "Repository gate FAILED" >&2
   exit 1
 fi
-echo "Repository gate OK: structure, 12 packages, no LICENSE, no secret material"
+echo "Repository gate OK: structure, 13 packages, no LICENSE, no secret material"

@@ -1,6 +1,6 @@
 # M6 范围：基线回放与 G8 复验
 
-> 状态：**M6 离线开始：S13 回放 21/21 决策一致；S17/G8/底盘实机待授权。**
+> 状态：**M6 离线：S13 回放 21/21；S17 plan-only goal 构建/校验通过；G8/底盘实机待授权。**
 > 基线：`jcheng-manipulation v1.0.0`（`b3411e4`）只读引用；不复制、不修改证据。
 > S13 只回放 decision，不执行运动；G8/底盘实机需单独明确授权。
 
@@ -22,11 +22,12 @@
 | `g8_acceptance_20261123/g8_run.json` | 11 | 11/11 |
 | `studio_g8_fast/20261121/run2.json` | 10 | 10/10 |
 
-### 6.2 S17 MoveIt 只规划（待实现/验证）
+### 6.2 S17 MoveIt 只规划（离线构建/校验已通过）
 
-- 目标：MoveIt 只调用 `/plan_kinematic_path` 或 `/move_action` 且
-  `planning_options.plan_only=true`；不产生执行。
-- 需要真实 MoveIt/move_group 环境或录制的 plan-only goal 证据；目前未接入。
+- `jcheng_moveit/plan_only.py`：构造 MoveGroup/GetMotionPlan 形状的 goal，
+  强制 `planning_options.plan_only=true`；拒绝含 `execute`/`trajectory` 的 goal。
+- `tests/test_moveit_plan_only.py`：正反用例通过；`check_m6_moveit.sh` 通过。
+- 真正 move_group 的 plan-only 调用与 `plan_kinematic_path` 响应尚未在实机验证。
 - 任何 MoveIt 执行路径必须关闭或无硬件发布权限。
 
 ### 6.3 S14 底盘脉冲（Mock 已覆盖，实机待授权）
@@ -47,11 +48,12 @@
 
 - S13 回放 21/21 决策一致。
 - `tests/test_replay.py` 合成 valid/invalid 用例通过。
+- S17 plan-only goal 构建/校验与正反测试通过。
 - 无运动、无硬件连接。
 
 ### 待完成
 
-- S17 plan-only 在真实 MoveIt 环境验证。
+- S17 plan-only 在真实 MoveIt/move_group 环境验证。
 - S14 实机底盘脉冲/标定失效。
 - G8 全流程实机复验与落点证据。
 - 旧网关回滚演练。

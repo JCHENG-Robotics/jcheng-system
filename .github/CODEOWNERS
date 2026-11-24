@@ -12,6 +12,7 @@
 /ros2_ws/src/jcheng_telemetry/ @JerichoCheng @JerichoSwaine
 /ros2_ws/src/jcheng_runtime/ @JerichoCheng @JerichoSwaine
 /ros2_ws/src/jcheng_vendor/ @JerichoCheng @JerichoSwaine
+/ros2_ws/src/jcheng_moveit/ @JerichoCheng @JerichoSwaine
 /configs/readonly.yaml @JerichoCheng @JerichoSwaine
 /configs/domains.yaml @JerichoCheng @JerichoSwaine
 /.github/          @JerichoCheng @JerichoSwaine

@@ -28,7 +28,9 @@
   不存在；无租约/越限拒绝。S7/S9 运行时检测仍有残余。
 - M6 S13：新增 `tools/replay_g8.py` 与 `tests/test_replay.py`；
   v1.0.0 G8 回放 21/21 decision 一致。仅决策回放，无运动。
-- M6 待完成：S17 MoveIt 只规划、S14 实机底盘、G8 全流程；需单独授权。
+- M6 S17：新增 `jcheng_moveit` plan-only goal 构建/校验；
+  拒绝 execute/trajectory；正反测试通过。真实 MoveIt 验证待做。
+- M6 待完成：真实 MoveIt plan-only、S14 实机底盘、G8 全流程；需单独授权。
 
 ## 0.1.0 (2026-11-23) — M3 Mock
 
