@@ -66,7 +66,18 @@
 - 只读安全视图只会是 `DISARMED` 或 `STOP_LATCHED`，不是控制权威；不使能、不租约。
 - M4 运行在域 0；域 41/42 配置已准备，但不能把运动节点放进域 0。
 
-## 9. M3 验证
+## 9. M5.1 ROS 传输不变量
+
+- 唯一运动入口是 `/jcheng/motion/execute`（`ExecuteMotion` action）。
+- `ValidateMotion` 只校验，不执行、不发布命令。
+- 所有执行必须携带有效租约；无租约/过期/抢占/撤销拒绝。
+- `/safety_stop=true` 立即 `STOP_LATCHED`，新校验/运动被拒。
+- 使能需要检查清单与确认短语；默认 `DISARMED`。
+- M5.1 只使用 `MockStack`：不导入厂商命令消息、不发布 `/servo_controller`、
+  不打开设备。M5.2 才允许受审查的 `/servo_controller` 硬件桥。
+- M5.1 的 action 成功必须来自 Mock 总线确认；不得把命令缓存当实测。
+
+## 10. M3 验证
 
 | 场景 | 结果 |
 |---|---|

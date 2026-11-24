@@ -39,6 +39,19 @@ gateway/testkit 入口和 bringup launch。**M3 不实现 ROS service/action 传
 创建 `RobotState`/`SafetyState` 发布者和 `GetBusServoState` 客户端。M4 不运行
 运动、租约或使能节点。域 41/42 的配置已准备，域 0→41/42 桥接留到 M5。
 
+## 1.2 M5.1 ROS 传输（Mock）
+
+```text
+/jcheng/authority/*_lease ─┐
+/jcheng/safety/* ──────────┼→ jcheng_runtime → MotionArbiter → MockHardwareBridge
+/jcheng/motion/execute ────┘                    └→ EvidenceStore
+/safety_stop=true ─────────→ MotionArbiter.stop → STOP_LATCHED
+```
+
+`jcheng_runtime` 是 M5.1 的单一运行时进程，暴露公共 service/action；核心
+仍是 `jcheng_system_core`。M5.1 不导入厂商命令消息、不发布 `/servo_controller`、
+不打开设备。M5.2 才把 Mock 硬件替换为 `/servo_controller` 硬件桥。
+
 ## 2. 包职责
 
 | 包 | M3 职责 | M4 状态 |
@@ -52,7 +65,8 @@ gateway/testkit 入口和 bringup launch。**M3 不实现 ROS service/action 传
 | `jcheng_guard` | 白名单诊断 | 未变；运行时检测留到 M5 |
 | `jcheng_testkit` | S1–S17 | 未变 |
 | `jcheng_telemetry` | — | 新增：遥测、只读网关、预检、证据、短时探针 |
-| `jcheng_bringup` | Mock launch | 增加 `readonly.launch.py` |
+| `jcheng_runtime` | — | M5.1 新增：租约/安全/校验服务、`ExecuteMotion` action（Mock） |
+| `jcheng_bringup` | Mock launch | 增加 `readonly.launch.py`、`motion_mock.launch.py` |
 
 ## 3. 安全边界（M3 已实现）
 
