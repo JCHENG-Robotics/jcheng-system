@@ -2,10 +2,11 @@
 
 JCHENG Robotics 的特权运行时与系统集成点。
 
-> 状态：**v0.3.0-dev — M5.2 核心实机验收通过（2026-11-24）；S7/S9 残余。**
+> 状态：**v0.3.0-dev — M5.2 核心实机通过；M6 S13 回放 21/21、S17 plan-only 离线通过。**
 > M4 实机只读已通过：30 分钟、1799/1799 `measured`、`writes=0`。
 > M5.2 单关节、夹爪开/合、停止、停止运行时后拒绝、无租约/越限均验证；
 > 夹爪采用定时完成 + 总线证据；手臂仍 ±8 pulse。S7/S9 未单独实机验证。
+> M6 离线开始：v1.0.0 G8 轨迹回放 decision 21/21 一致；未执行运动。
 
 ## 1. 当前交付
 
@@ -22,6 +23,7 @@ JCHENG Robotics 的特权运行时与系统集成点。
 | `jcheng_telemetry` | 只读遥测缓存、只读网关、预检、证据、短时探针 |
 | `jcheng_runtime` | M5.1 ROS 传输：租约/安全/校验服务、`ExecuteMotion` action、停止锁存（Mock） |
 | `jcheng_vendor` | M5.2 受监督硬件运行时：单关节/夹爪、`/servo_controller`、总线复核 |
+| `jcheng_moveit` | M6 S17 plan-only goal 构建/校验；不执行 MoveIt |
 | `jcheng_bringup` | `mock_stack.launch.py` + `readonly.launch.py` + `motion_mock.launch.py` + `motion_vendor.launch.py` |
 
 ## 2. 架构（M3）
@@ -152,6 +154,8 @@ Mock 网关端点（核心子集）：`/v1/health`、`/v1/contract`、`/v1/state
   开 647→183，均 `COMPLETED`/`bus_verified`；停止 hold 0.266 ms；
   停止运行时后 action server 不存在；无租约/越限拒绝。
 - 残余：S7 状态过期注入、S9 运行时发布者检测未单独实机验证。
+- M6（离线）：S13 回放 21/21 decision 一致（G8 acceptance 11/11、
+  fast run2 10/10）；S17 plan-only goal 构建/校验与测试通过；未执行运动。
 - M4（实机）：**通过**；30 分钟、1799/1799 `measured`、`writes=0`；
   独立总线读数与新节点逐项一致；域 42 看不到厂商命令话题。
 - 关键发现：旧网关 `measured` 是命令缓存（`truth=commanded`），与真实总线
@@ -160,15 +164,15 @@ Mock 网关端点（核心子集）：`/v1/health`、`/v1/contract`、`/v1/state
   实机证据：`jcheng-manipulation/docs/ecosystem/evidence/m4-readonly-20261123/`。
 
 详见 [M3 范围](docs/M3-SCOPE.md)、[M4 范围](docs/M4-SCOPE.md)、
-[M5 范围](docs/M5-SCOPE.md) 与 [验收](docs/ACCEPTANCE.md)。
+[M5 范围](docs/M5-SCOPE.md)、[M6 范围](docs/M6-SCOPE.md) 与
+[验收](docs/ACCEPTANCE.md)。
 
-## 6. M5 与后续
+## 6. M6 与后续
 
-1. M5.1 已合并：ROS 服务/action、租约、安全、校验、停止锁存，Mock 硬件。
-2. M5.2 核心实机验收通过：单关节、夹爪开/合、停止、停止运行时拒绝、
-   无租约/越限。
-3. 残余：S7 状态过期注入、S9 运行时发布者检测；之后再做 `v0.3.0` 标签。
-4. M6 才做 G8 复验与 MoveIt 只规划；任何实机动作仍需单独授权。
+1. M5.2 核心实机验收通过；S7/S9 运行时检测残余。
+2. M6 S13 回放 21/21；S17 plan-only goal 构建/校验通过。
+3. M6 待完成：真实 MoveIt plan-only、S14 实机底盘、G8 全流程、落点证据。
+4. G8/底盘实机需单独明确授权；旧网关仍保留只读回滚。
 
 ## 7. 许可
 
