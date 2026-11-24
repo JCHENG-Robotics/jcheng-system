@@ -2,10 +2,10 @@
 
 JCHENG Robotics 的特权运行时与系统集成点。
 
-> 状态：**v0.3.0-dev — M5.1 Mock ROS 传输完成（2026-11-24）；M5.2 硬件待授权。**
+> 状态：**v0.3.0-dev — M5.1 已合并；M5.2 单关节通过，夹爪开 UNKNOWN（2026-11-24）。**
 > M4 实机只读已通过：30 分钟、1799/1799 `measured`、`writes=0`。
-> M5.1 提供租约/安全/校验服务与 `ExecuteMotion` action，但**只使用 Mock 硬件**；
-> **没有厂商命令发布者、没有发送任何运动命令、没有 `LICENSE`。**
+> M5.2 单关节 `COMPLETED`；夹爪全开目标 170、总线 183（差 13 > ±8），
+> 已 `STOP_LATCHED`，未自动重试。**M5.2 未完成；下一次动作需单独授权。**
 
 ## 1. 当前交付
 
@@ -21,7 +21,8 @@ JCHENG Robotics 的特权运行时与系统集成点。
 | `jcheng_testkit` | S1–S17 场景运行器 |
 | `jcheng_telemetry` | 只读遥测缓存、只读网关、预检、证据、短时探针 |
 | `jcheng_runtime` | M5.1 ROS 传输：租约/安全/校验服务、`ExecuteMotion` action、停止锁存（Mock） |
-| `jcheng_bringup` | `mock_stack.launch.py` + `readonly.launch.py` + `motion_mock.launch.py` |
+| `jcheng_vendor` | M5.2 受监督硬件运行时：单关节/夹爪、`/servo_controller`、总线复核 |
+| `jcheng_bringup` | `mock_stack.launch.py` + `readonly.launch.py` + `motion_mock.launch.py` + `motion_vendor.launch.py` |
 
 ## 2. 架构（M3）
 
@@ -78,7 +79,8 @@ HTTP/CLI client
 - `ValidateMotion` 只校验，不执行、不发布命令。
 - `/safety_stop=true` 立即锁存并拒绝新命令。
 - M5.1 只使用 `MockStack`；没有厂商命令发布者、没有写服务、没有设备访问。
-- M5.2 才接入 `/servo_controller` 硬件桥与实机单关节/夹爪，需单独授权。
+- M5.2 的 `/servo_controller` 硬件桥与单关节/夹爪已实现；单关节通过，
+  夹爪开因总线差 13 pulses 被锁存。下一次实机动作需单独授权。
 
 ## 3. 快速开始
 
@@ -146,6 +148,9 @@ Mock 网关端点（核心子集）：`/v1/health`、`/v1/contract`、`/v1/state
   `writes=0`；`m4-readonly` 构建 10 个系统包并通过只读门禁。
 - M5.1（Mock）：5 项 `tests_ros` 通过（租约、安全、校验、停止锁存、action
   完成）；`m5-mock` 构建 11 个系统包并通过 Mock-only 门禁。
+- M5.2（实机，部分）：joint1 +0.05 rad `COMPLETED`（505 vs 512，7 pulses）；
+  夹爪全开目标 170、总线 183，差 13 > ±8，`STOP_LATCHED`；闭合被拒。
+  未自动重试，M5.2 未完成。
 - M4（实机）：**通过**；30 分钟、1799/1799 `measured`、`writes=0`；
   独立总线读数与新节点逐项一致；域 42 看不到厂商命令话题。
 - 关键发现：旧网关 `measured` 是命令缓存（`truth=commanded`），与真实总线
@@ -158,11 +163,11 @@ Mock 网关端点（核心子集）：`/v1/health`、`/v1/contract`、`/v1/state
 
 ## 6. M5 与后续
 
-1. M5.1 已完成：ROS 服务/action、租约、安全、校验、停止锁存，Mock 硬件。
-2. M5.2 待开发：`/servo_controller` 硬件桥、单关节 0.05 rad、夹爪开/合、
-   停止传播 ≤100 ms；届时需单独授权。
-3. M6 才做 G8 复验与 MoveIt 只规划。
-4. 任何实机动作仍需单独授权。
+1. M5.1 已合并：ROS 服务/action、租约、安全、校验、停止锁存，Mock 硬件。
+2. M5.2 已实现硬件桥；单关节通过，夹爪开因总线差 13 pulses 锁存。
+   下一步先人工检查夹爪开限位/连杆，确认可达开度，再单独授权重试。
+3. 停止传播 ≤100 ms、节点停止后拒绝新命令尚未实机验证。
+4. M6 才做 G8 复验与 MoveIt 只规划；任何实机动作仍需单独授权。
 
 ## 7. 许可
 
