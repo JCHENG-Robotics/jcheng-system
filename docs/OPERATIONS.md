@@ -1,7 +1,8 @@
-# 运行手册（M3 Mock / M4 只读）
+# 运行手册（M3 Mock / M4 只读 / M5.1 Mock ROS）
 
-> M3 只运行 Mock；M4 只读接入真实厂商状态，不打开串口、不发布厂商命令、
-> **不发送任何运动**。任何实机运行需要单独授权。
+> M3 只运行 Mock；M4 只读接入真实厂商状态；M5.1 只通过 ROS 服务/action
+> 操作 Mock 硬件。**不打开串口、不发布厂商命令、不发送任何运动。**
+> M5.2 实机运动需要单独授权。
 
 ## 1. 构建与测试
 
@@ -117,7 +118,31 @@ curl -s -H "Authorization: Bearer $JCHENG_GATEWAY_TOKEN" \
 2026-11-23 实机结果：30 分钟、1799/1799 `measured`、`writes=0`、`ok=true`；
 证据见 `jcheng-manipulation/docs/ecosystem/evidence/m4-readonly-20261123/`。
 
-## 7. 实机运动
+## 7. M5.1 Mock ROS 传输
 
-M4 不包含运动步骤。M5 起单关节/夹爪/停止需要单独评审与单独授权；
-旧网关在迁移期保持只读。
+```bash
+source /opt/ros/humble/setup.bash
+source install/setup.bash
+export JCHENG_ROOT="$PWD"
+python3 -m pytest -q tests_ros
+ros2 launch jcheng_bringup motion_mock.launch.py root:="$JCHENG_ROOT"
+```
+
+另一个终端：
+
+```bash
+ros2 service list | grep /jcheng/
+ros2 service call /jcheng/safety/get_state \
+  jcheng_interfaces/srv/GetSafetyState "{}"
+```
+
+- 默认 `DISARMED`。
+- `ValidateMotion` 只校验；`ExecuteMotion` 只执行 Mock 硬件。
+- `/safety_stop=true` 会锁存并拒绝新命令。
+- 不连接机器人、不发布 `/servo_controller`、不打开设备。
+
+## 8. M5.2 实机运动（待单独授权）
+
+M5.2 才接入 `/servo_controller` 硬件桥、单关节 0.05 rad、夹爪开/合和
+软件停止实测。开始前必须：清空工作区、支撑机械臂、确认电池/链路/总线、
+操作员与监督人就位，并获得单独明确授权；旧网关保持只读。

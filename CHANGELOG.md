@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — M4 read-only integration
+## Unreleased — M4 read-only + M5.1 Mock ROS transport
 
 - 新增 `jcheng_hardware/readonly.py`：递增舵机 ID、0–1000 脉冲校验、
   无 publish/write API 的只读总线桥。
@@ -14,7 +14,11 @@
   独立总线读数与新节点一致；旧网关 `measured` 实为命令缓存，与真实总线
   最大相差 387 pulses。没有发送任何运动命令。
 - 修复：总线默认 4 Hz；网关 token 改走环境变量；关闭时避免重复
-  `rclpy.shutdown`。修复分支尚未合并到 `main`。
+  `rclpy.shutdown`。
+- 新增 `jcheng_runtime`：M5.1 ROS 服务/action 传输，租约、安全、校验、
+  停止锁存；只使用 `MockStack`，没有厂商命令发布者。
+- 新增 `tests_ros` 5 项与 `scripts/check_m5_mock.sh`；CI 增加 `m5-mock`。
+- M5.2 硬件桥、单关节/夹爪实机运动尚未开始，需要单独授权。
 
 ## 0.1.0 (2026-11-23) — M3 Mock
 

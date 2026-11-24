@@ -2,10 +2,10 @@
 
 JCHENG Robotics 的特权运行时与系统集成点。
 
-> 状态：**v0.2.0-dev — M4 实机只读验收通过（2026-11-23）；修复分支待合并。**
-> 实机 30 分钟：1799/1799 样本 `truth=measured`、`writes=0`；
-> **没有发送任何运动命令、没有重启厂商容器、未打 M4 标签。**
-> 仍然**不包含运动 service/action 执行、真实运动或 `LICENSE`。**
+> 状态：**v0.3.0-dev — M5.1 Mock ROS 传输完成（2026-11-24）；M5.2 硬件待授权。**
+> M4 实机只读已通过：30 分钟、1799/1799 `measured`、`writes=0`。
+> M5.1 提供租约/安全/校验服务与 `ExecuteMotion` action，但**只使用 Mock 硬件**；
+> **没有厂商命令发布者、没有发送任何运动命令、没有 `LICENSE`。**
 
 ## 1. 当前交付
 
@@ -20,7 +20,8 @@ JCHENG Robotics 的特权运行时与系统集成点。
 | `jcheng_guard` | 发布者白名单诊断 |
 | `jcheng_testkit` | S1–S17 场景运行器 |
 | `jcheng_telemetry` | 只读遥测缓存、只读网关、预检、证据、短时探针 |
-| `jcheng_bringup` | `mock_stack.launch.py` + `readonly.launch.py` |
+| `jcheng_runtime` | M5.1 ROS 传输：租约/安全/校验服务、`ExecuteMotion` action、停止锁存（Mock） |
+| `jcheng_bringup` | `mock_stack.launch.py` + `readonly.launch.py` + `motion_mock.launch.py` |
 
 ## 2. 架构（M3）
 
@@ -40,7 +41,7 @@ HTTP client
 - 完成判定来自 Mock 总线读数；总线失败锁存 `UNKNOWN`。
 - 契约哈希固定为 interfaces v0.1.0：
   `sha256:0b8d72ced7f54d444d6851d8b99a51a78e2bed3f687324f51a15f76557f24b42`。
-- M4 才增加 ROS service/action 传输与域 41/42/43。
+- M4 增加只读接入；M5.1 增加 ROS 服务/action 传输（仍为 Mock）。
 
 ### 2.1 M4 只读链路
 
@@ -60,6 +61,25 @@ HTTP client
 - 不打开串口/设备；不重启厂商容器；不使能、不租约、不运动。
 - M4 遥测运行在域 0；41/42 配置已准备，域桥接是 M5 的前置条件。
 
+### 2.2 M5.1 ROS 传输（Mock）
+
+```text
+HTTP/CLI client
+  → /jcheng/authority/*_lease        （LeaseManager）
+  → /jcheng/safety/validate_motion   （SafetySupervisor，纯校验）
+  → /jcheng/safety/{arm,disarm,reset,get_state}
+  → /jcheng/motion/execute           （ExecuteMotion action）
+      → MotionArbiter → MockHardwareBridge
+  → /safety_stop (Bool, true)        → STOP_LATCHED
+```
+
+- 默认 `DISARMED`；使能需要检查清单与确认短语。
+- 运动必须携带有效租约；无租约/过期/抢占/撤销都拒绝。
+- `ValidateMotion` 只校验，不执行、不发布命令。
+- `/safety_stop=true` 立即锁存并拒绝新命令。
+- M5.1 只使用 `MockStack`；没有厂商命令发布者、没有写服务、没有设备访问。
+- M5.2 才接入 `/servo_controller` 硬件桥与实机单关节/夹爪，需单独授权。
+
 ## 3. 快速开始
 
 ```bash
@@ -69,6 +89,12 @@ source install/setup.bash
 
 # 28 项契约/场景/只读测试（27 pass / 1 conditional skip）
 python3 -m pytest -q
+
+# M5.1 Mock ROS 传输：5 项服务/action/停止测试
+python3 -m pytest -q tests_ros
+
+# M5.1 Mock 运行时（租约/安全/校验/action；不连接硬件）
+ros2 launch jcheng_bringup motion_mock.launch.py root:="$PWD"
 
 # S1–S17（15 pass / 2 skipped）
 ros2 run jcheng_testkit jcheng_scenarios --root . \
@@ -109,13 +135,17 @@ Mock 网关端点（核心子集）：`/v1/health`、`/v1/contract`、`/v1/state
 - 平台没有急停/抱闸/独立编码器/自碰撞模型。
 - M4 只读链路没有命令发布者、没有写服务、没有串口/设备访问。
 - `/controller_manager/joint_states` 只标记 `commanded`，不能作为完成依据。
-- 任何实机运动仍需单独、明确的现场授权；M4 没有实机动作。
+- M5.1 的租约/安全/`ExecuteMotion` 只作用于 Mock 硬件；`/safety_stop=true`
+  立即锁存并拒绝新命令。
+- 任何实机运动仍需单独、明确的现场授权；M5.1 没有实机动作。
 
 ## 5. 验收
 
 - M3：15 个必选场景通过，2 个按计划跳过；16 项 pytest；`m3-mock` 通过。
 - M4（离线）：28 项 pytest（27 pass / 1 conditional skip）；短时只读探针
   `writes=0`；`m4-readonly` 构建 10 个系统包并通过只读门禁。
+- M5.1（Mock）：5 项 `tests_ros` 通过（租约、安全、校验、停止锁存、action
+  完成）；`m5-mock` 构建 11 个系统包并通过 Mock-only 门禁。
 - M4（实机）：**通过**；30 分钟、1799/1799 `measured`、`writes=0`；
   独立总线读数与新节点逐项一致；域 42 看不到厂商命令话题。
 - 关键发现：旧网关 `measured` 是命令缓存（`truth=commanded`），与真实总线
@@ -123,14 +153,15 @@ Mock 网关端点（核心子集）：`/v1/health`、`/v1/contract`、`/v1/state
 - 报告：`e2e/reports/m3-mock.json`、`e2e/reports/m4-readonly.json`；
   实机证据：`jcheng-manipulation/docs/ecosystem/evidence/m4-readonly-20261123/`。
 
-详见 [M3 范围](docs/M3-SCOPE.md)、[M4 范围](docs/M4-SCOPE.md) 与
-[验收](docs/ACCEPTANCE.md)。
+详见 [M3 范围](docs/M3-SCOPE.md)、[M4 范围](docs/M4-SCOPE.md)、
+[M5 范围](docs/M5-SCOPE.md) 与 [验收](docs/ACCEPTANCE.md)。
 
-## 6. M4 与后续
+## 6. M5 与后续
 
-1. M4 只读链路已实现：遥测、只读桥、只读网关、域配置、预检、证据。
-2. 待实机只读验收：30 分钟、总线对比、域隔离；**不运动**。
-3. M5 才接入 `ExecuteMotion`/租约/安全服务与受监督单关节/夹爪运动。
+1. M5.1 已完成：ROS 服务/action、租约、安全、校验、停止锁存，Mock 硬件。
+2. M5.2 待开发：`/servo_controller` 硬件桥、单关节 0.05 rad、夹爪开/合、
+   停止传播 ≤100 ms；届时需单独授权。
+3. M6 才做 G8 复验与 MoveIt 只规划。
 4. 任何实机动作仍需单独授权。
 
 ## 7. 许可

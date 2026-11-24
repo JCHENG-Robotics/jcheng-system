@@ -5,8 +5,10 @@
 /docs/SAFETY.md    @JerichoCheng @JerichoSwaine
 /docs/ACCEPTANCE.md @JerichoCheng @JerichoSwaine
 /docs/M4-SCOPE.md  @JerichoCheng @JerichoSwaine
+/docs/M5-SCOPE.md  @JerichoCheng @JerichoSwaine
 /ros2_ws/src/jcheng_hardware/jcheng_hardware/readonly.py @JerichoCheng @JerichoSwaine
 /ros2_ws/src/jcheng_telemetry/ @JerichoCheng @JerichoSwaine
+/ros2_ws/src/jcheng_runtime/ @JerichoCheng @JerichoSwaine
 /configs/readonly.yaml @JerichoCheng @JerichoSwaine
 /configs/domains.yaml @JerichoCheng @JerichoSwaine
 /.github/          @JerichoCheng @JerichoSwaine

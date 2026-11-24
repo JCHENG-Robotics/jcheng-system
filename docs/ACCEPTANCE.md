@@ -1,13 +1,13 @@
 # 验收分层
 
-| 层级 | 名称 | 环境 | 实机 | M3/M4 状态 |
+| 层级 | 名称 | 环境 | 实机 | M3/M4/M5 状态 |
 |---|---|---|---|---|
 | L0 | 契约/静态 | runner | 否 | 通过 |
-| L1 | 单元 | runner | 否 | 28 项（27 pass / 1 conditional skip） |
+| L1 | 单元 | runner | 否 | 28 项 + M5.1 5 项 ROS |
 | L2 | Mock 集成 | 进程内 | 否 | 通过 |
 | L3 | Mock E2E | Mock 网关/总线 | 否 | 通过 |
 | L4 | 回放 | 录制数据 | 否 | S13 M6 |
-| L5 | 实机 | 域 0/41/42 | 是 | M4 只读未实机；M5 运动未开始 |
+| L5 | 实机 | 域 0/41/42 | 是 | M4 只读通过；M5 实机运动未开始 |
 
 ## M3 结果
 
@@ -43,6 +43,16 @@
 - **未发送任何运动命令；未重启厂商容器。**
 - 证据：`jcheng-manipulation/docs/ecosystem/evidence/m4-readonly-20261123/`。
 
+## M5.1 结果（Mock ROS 传输，2026-11-24）
+
+- `tests_ros`：5 项通过（服务往返、租约、安全 arm、停止锁存、action 完成与
+  总线确认）。
+- `scripts/check_m5_mock.sh`：通过；运行时只使用 `MockStack`，无厂商命令
+  发布者、无写服务、无设备路径。
+- `m5-mock`：Humble 构建 interfaces + 11 个系统包，运行 `pytest` 与
+  `pytest tests_ros`。
+- **没有连接机器人、没有发送运动命令。**
+
 ## 通过标准（M3）
 
 - Mock 场景 required failures 为 0。
@@ -60,9 +70,10 @@
 
 ## 已知限制
 
-- M3 是 Mock；M4 只读接入尚未在机器人上执行。
-- M4 遥测运行在厂商域 0；域 0→41/42 桥接留到 M5。
-- 没有运动 service/action 执行、`ExecuteMotion` action 或真实运动。
+- M3 是 Mock；M4 只读接入已在机器人上通过。
+- M5.1 的 service/action 只作用于 Mock 硬件；M5.2 硬件桥与实机运动未开始。
+- M4 遥测运行在厂商域 0；域 0→41/42 桥接留到 M5.2。
+- 没有真实 `ExecuteMotion` 执行、真实单关节/夹爪运动。
 - 没有急停/抱闸/独立编码器/自碰撞模型。
 - 底盘 `open_loop`，没有里程计。
 - 许可证审查 pending；没有 `LICENSE`。
