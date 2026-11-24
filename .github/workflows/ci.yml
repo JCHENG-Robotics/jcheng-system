@@ -223,3 +223,60 @@ jobs:
           python3 -m pytest -q
           python3 -m pytest -q tests_ros
           bash scripts/check_m5_mock.sh
+
+  m5-vendor:
+    name: m5-vendor
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: ros:humble-ros-base@sha256:dfc94c85d8e01f230951b2a85ca5576e08473081c3da5fbbe8f3ab844703b9ba
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - name: Install git for checkout
+        shell: bash
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git ca-certificates
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Install build and test dependencies
+        shell: bash
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            python3-colcon-common-extensions \
+            python3-pip \
+            python3-setuptools \
+            python3-yaml \
+            ros-humble-ament-cmake \
+            ros-humble-builtin-interfaces \
+            ros-humble-geometry-msgs \
+            ros-humble-rclpy \
+            ros-humble-rosidl-default-generators \
+            ros-humble-rosidl-default-runtime \
+            ros-humble-std-msgs
+          python3 -m pip install --no-cache-dir 'pytest==8.3.4'
+      - name: Fetch pinned interfaces
+        shell: bash
+        run: |
+          git clone --depth 1 --branch v0.1.0 \
+            https://github.com/JCHENG-Robotics/jcheng-interfaces.git \
+            /tmp/jcheng-interfaces
+          cp -r /tmp/jcheng-interfaces/ros2_ws/src/jcheng_interfaces ros2_ws/src/
+      - name: Build interface and system packages
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          colcon build \
+            --base-paths ros2_ws/src \
+            --event-handlers console_cohesion+
+      - name: M5.2 vendor static and executor tests
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          source install/setup.bash
+          python3 -m pytest -q
+          python3 -m pytest -q tests_ros
+          bash scripts/check_m5_vendor.sh

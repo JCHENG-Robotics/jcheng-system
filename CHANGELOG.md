@@ -18,7 +18,11 @@
 - 新增 `jcheng_runtime`：M5.1 ROS 服务/action 传输，租约、安全、校验、
   停止锁存；只使用 `MockStack`，没有厂商命令发布者。
 - 新增 `tests_ros` 5 项与 `scripts/check_m5_mock.sh`；CI 增加 `m5-mock`。
-- M5.2 硬件桥、单关节/夹爪实机运动尚未开始，需要单独授权。
+- 新增 `jcheng_vendor` 与 `motion_vendor.launch.py`：唯一 `/servo_controller`
+  发布者、单关节/夹爪、`GetBusServoState` 复核、停止锁存/保持。
+- 2026-11-24 实机：joint1 +0.05 rad `COMPLETED`（505 vs 512，7 pulses）；
+  夹爪全开目标 170、总线 183（差 13 > ±8），`UNKNOWN` 锁存，闭合被拒。
+  未自动重试；M5.2 未完成，需人工检查夹爪开限位/连杆后再授权。
 
 ## 0.1.0 (2026-11-23) — M3 Mock
 

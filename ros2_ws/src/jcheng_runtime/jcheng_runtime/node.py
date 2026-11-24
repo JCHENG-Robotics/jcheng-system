@@ -332,7 +332,9 @@ class RuntimeNode(Node):
         feedback.measured_positions = list(self.stack.hardware.state().positions)
         feedback.bus_verified = False
         feedback.stamp = ros_time(self.stack.clock, self.stack.clock.now())
-        goal_handle.publish_feedback(feedback)
+        wrapper = ExecuteMotion.Feedback()
+        wrapper.feedback = feedback
+        goal_handle.publish_feedback(wrapper)
 
     def _execute(self, goal_handle: Any):
         command = command_to_core(goal_handle.request.command)

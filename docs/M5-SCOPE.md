@@ -1,7 +1,8 @@
 # M5 范围：受监督单关节/夹爪执行
 
-> 状态：**M5.1 Mock ROS 传输已实现（2026-11-24）；M5.2 硬件执行与实机运动待单独授权。**
-> M5.1 只运行 Mock 硬件：不连接机器人、不发布厂商命令、不发送运动。
+> 状态：**M5.1 已合并；M5.2 单关节通过，夹爪开 UNKNOWN，M5.2 未完成（2026-11-24）。**
+> 单关节 joint1 +0.05 rad `COMPLETED`；夹爪全开目标 170、总线 183，
+> 差 13 pulses 超过 ±8，已 `STOP_LATCHED`；没有自动重试。
 > 基线：`jcheng-manipulation v1.0.0`（`b3411e4`）只读引用；`v0.1.0` 标签不动。
 
 ## 1. 交付拆分
@@ -17,14 +18,17 @@
 | 硬件 | `MockStack`；**没有厂商命令发布者、没有写服务、没有串口/设备访问** |
 | 测试 | `tests_ros/test_runtime.py`：服务、租约、校验、停止锁存、action 完成 |
 
-### M5.2 硬件执行（待单独授权）
+### M5.2 硬件执行（已实现；实机部分通过）
 
-- `jcheng_hardware` 成为 `/servo_controller`（`servo_controller_msgs/ServosPosition`）的
+- `jcheng_vendor` 是 `/servo_controller`（`servo_controller_msgs/ServosPosition`）的
   唯一发布者；只允许 step/gripper 目标，发布前必须通过安全校验与租约。
-- `jcheng_runtime` 从 Mock 切换为硬件桥；完成判定只来自 `GetBusServoState`。
-- 实机步骤：单关节 0.05 rad、夹爪开/合各一次、软件停止传播 ≤100 ms、
-  停止安全节点后新命令被拒、无租约/越限 100% 拒绝。
-- 必须获得操作员的**单独、明确授权**；M5.1 不授权任何运动。
+- 完成判定只来自 `GetBusServoState`；`UNKNOWN` 后不自动重试。
+- **实机结果（2026-11-24）：**
+  - 单关节 joint1 +0.05 rad：`COMPLETED`，总线 505 vs 目标 512（7 pulses）。
+  - 夹爪全开：目标 170 pulse，总线 183，差 13 > ±8；`STOP_LATCHED`。
+  - 夹爪闭合被安全拒绝；未做停止传播/节点停止测试。
+  - M5.2 **未完成**；需人工检查夹爪开限位/连杆，确认可达开度后再授权重试。
+- 任何下一次实机动作仍需单独、明确授权。
 
 ## 2. 服务/action 名称（M5.1）
 

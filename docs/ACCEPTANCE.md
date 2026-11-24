@@ -53,6 +53,18 @@
   `pytest tests_ros`。
 - **没有连接机器人、没有发送运动命令。**
 
+## M5.2 结果（实机，2026-11-24，部分通过）
+
+- 前置：`DISARMED` → `ARMED_IDLE`、租约 granted、`ValidateMotion=approved`。
+- 单关节 joint1 +0.05 rad：`COMPLETED`、`bus_verified=true`；
+  总线 505 vs 目标 512（7 pulses，容差 8）。
+- 夹爪全开 2.22 rad（170 pulse）：总线 183，差 13 > ±8；
+  `MOTION_OUTCOME_UNKNOWN`，`STOP_LATCHED`；闭合被安全拒绝。
+- 未自动重试、未重置；没有继续运动。
+- 最终总线：183/500/110/831/597/507（servo 1..6）。
+- 结论：**M5.2 未完成**；需人工检查夹爪开限位/连杆，确认可达开度后再授权。
+- 证据：`jcheng-manipulation/docs/ecosystem/evidence/m52-20261124/`。
+
 ## 通过标准（M3）
 
 - Mock 场景 required failures 为 0。
@@ -71,8 +83,9 @@
 ## 已知限制
 
 - M3 是 Mock；M4 只读接入已在机器人上通过。
-- M5.1 的 service/action 只作用于 Mock 硬件；M5.2 硬件桥与实机运动未开始。
-- M4 遥测运行在厂商域 0；域 0→41/42 桥接留到 M5.2。
+- M5.1 的 service/action 只作用于 Mock 硬件；M5.2 已上实机但夹爪开未通过。
+- M4 遥测运行在厂商域 0；域 0→41/42 桥接尚未实现。
+- M5.2 的停止传播 ≤100 ms、节点停止后拒绝新命令尚未实机验证。
 - 没有真实 `ExecuteMotion` 执行、真实单关节/夹爪运动。
 - 没有急停/抱闸/独立编码器/自碰撞模型。
 - 底盘 `open_loop`，没有里程计。
