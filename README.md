@@ -26,6 +26,15 @@ The privileged runtime and system integration point for JCHENG Robotics.
 | `jcheng_moveit` | M6 S17 plan-only goal construction/validation; does not execute MoveIt |
 | `jcheng_bringup` | `mock_stack`, `readonly`, `motion_mock` and `motion_vendor` launch files |
 
+### 1.1 Deployment image
+
+The ArmPi Ultra runtime spec, flatten/publish scripts and the published
+`armpi-ultra:flatten-20261125` image (7.1 GB, `linux/arm64`, digest
+`sha256:d4e6f3901f1c43e08f4018ff7f7b55dec21b2955dba8b98404a440a1f89df15f`)
+are in [`deploy/armpi-ultra/`](deploy/armpi-ultra/README.md). The flatten and
+rebuild acceptance is in
+[`docs/ACCEPTANCE-20261125.md`](deploy/armpi-ultra/docs/ACCEPTANCE-20261125.md).
+
 ## 2. Architecture
 
 ```text

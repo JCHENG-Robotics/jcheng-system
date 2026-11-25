@@ -3,8 +3,8 @@
 > Status: **inconclusive** as of 2026-11-25 for v0.3.0-dev.
 > Operator: JerichoCheng. Reviewer: pending.
 > Scope: M3 mock stack, M4 read-only integration, M5.1 mock transport,
-> M5.2 supervised hardware motion and M6 offline replay/plan-only, plus the
-> real MoveIt plan-only check.
+> M5.2 supervised hardware motion, M6 offline replay/plan-only, the real MoveIt
+> plan-only check, and the ArmPi Ultra image rebuild/publish.
 > The completed gates pass; S14/G8 execution, S7/S9 and trajectory execution
 > have not run, so the system acceptance is not complete.
 > No motion was sent by this documentation change.
@@ -29,11 +29,13 @@
 | M4 offline pytest | L1 | pass — 28 tests (27 pass, 1 conditional skip) | CI `m4-readonly` |
 | M4 read-only probe | L2 | pass — `writes=0`, measured samples > 0 | `e2e/reports/m4-readonly.json` |
 | M4 hardware read-only | L5 | pass — 30 min, 1799/1799 `measured`, `writes=0` | `jcheng-manipulation/docs/ecosystem/evidence/m4-readonly-20261123/` |
+| ArmPi Ultra image rebuild + publish | L5 | pass — 20 nodes / 60 topics identical, colour ~6.5 Hz, aligned depth ~3.9 Hz, reboot persistent | `deploy/armpi-ultra/docs/ACCEPTANCE-20261125.md` |
 | M5.1 ROS transport | L2–L3 | pass — 5 tests | `tests_ros/`; CI `m5-mock` |
 | M5.2 hardware motion | L5 | inconclusive — joint, gripper, stop, lease/limit rejection pass; S7/S9 not run | `jcheng-manipulation/docs/ecosystem/evidence/m52-final-20261124/` |
 | M6 S13 replay | L4 | pass — 21/21 decisions; validate mean 0.0166 ms, p95 ≤0.0352 ms | `jcheng-manipulation/docs/ecosystem/evidence/m6-s13-20261124/` |
 | M6 S17 plan-only | L1 | pass — construction and rejection tests | `tests/test_moveit_plan_only.py` |
 | M6 S17 real MoveIt plan-only | L5 | pass — MoveIt 2.5.10, `SUCCESS`, 8-point plan, 0 controller servers, no command topics | `jcheng-manipulation/docs/ecosystem/evidence/m6-s17-20261125/` |
+| ArmPi Ultra image rebuild | L5 | pass — 7.1 GB image preserves 20 nodes / 60 topics and survives reboot | `deploy/armpi-ultra/docs/ACCEPTANCE-20261125.md` |
 
 ## 3. Verified claims
 

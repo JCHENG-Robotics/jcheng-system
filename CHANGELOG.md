@@ -11,6 +11,12 @@ All notable changes to this project are documented here. Format based on
 - `scripts/humble_ci.sh`: local Humble build/test wrapper (m3, m4, m5-mock,
   m5-vendor, m6) in the `armpi-humble-moveit` image, with a disposable
   workspace copy. CI remains the artifact authority.
+- `deploy/armpi-ultra/`: runtime spec, flatten/publish scripts, image lock and
+  the 2026-11-25 acceptance. Published
+  `ghcr.io/jcheng-robotics/armpi-ultra:20261125` (`linux/arm64`, 7.1 GB,
+  digest `sha256:d4e6f3901f1c43e08f4018ff7f7b55dec21b2955dba8b98404a440a1f89df15f`);
+  20 ROS nodes / 60 topics were unchanged and the container survived a host
+  reboot.
 - `jcheng_hardware/readonly.py`: a read-only bus bridge with strictly
   increasing servo IDs, 0–1000 pulse validation and no publish/write API.
 - `jcheng_telemetry`: telemetry cache with a `measured`/`commanded`
