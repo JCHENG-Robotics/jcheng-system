@@ -1,0 +1,27 @@
+[Unit]
+Description=ArmPi Debug Studio pose/motion gateway (8766, manual start)
+Documentation=file:/usr/local/lib/armpi-gateway/README.md
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+# The installer substitutes these placeholders. The host wrapper only runs
+# `docker exec`; the in-container gateway runs as the vendor `ubuntu` user.
+User=pi
+Group=docker
+EnvironmentFile=/etc/armpi-gateway/pose.env
+ExecStart=/usr/local/lib/armpi-gateway/armpi-gateway-pose-run.sh
+# Stop the in-container process explicitly; `docker exec` may not forward
+# signals. The pattern includes --port 8766 and uses `--` so pkill does not
+# parse the leading option.
+ExecStop=/bin/bash -c '/usr/bin/docker exec ArmPiUltra pkill -TERM -f -- "armpi_debug_gateway.main.*--port 8766" || true'
+TimeoutStopSec=20
+# Never restart a motion gateway automatically after a crash or a stop.
+Restart=no
+
+[Install]
+# Deliberately not enabled by install-pose-gateway.sh: motion requires an
+# explicit operator start.
+WantedBy=multi-user.target

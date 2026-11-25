@@ -1,0 +1,7 @@
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/mmcblk0p2   52G   22G   29G  44% /
+TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
+Images          1         1         7.101GB   0B (0%)
+Containers      1         1         43.1MB    0B (0%)
+Local Volumes   2         0         0B        0B
+Build Cache     15        0         365B      365B

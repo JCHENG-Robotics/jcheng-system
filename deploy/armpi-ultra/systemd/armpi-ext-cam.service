@@ -1,0 +1,16 @@
+[Unit]
+Description=ArmPi off-board D435i ROS camera driver (inside the ArmPiUltra container)
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/lib/armpi-ext-cam/ext-cam-run.sh
+ExecStop=/bin/bash -c '/usr/bin/docker exec ArmPiUltra pkill -TERM -f "ext_cam_node.py" || true'
+TimeoutStopSec=15
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
