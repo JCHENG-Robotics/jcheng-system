@@ -26,7 +26,8 @@ All notable changes to this project are documented here. Format based on
   publisher, single-joint/gripper execution, `GetBusServoState` verification and
   stop latch/hold.
 - `jcheng_moveit` plan-only goal construction/validation (M6 S17), rejecting
-  execute/trajectory requests.
+  execute/trajectory requests; verified against real MoveIt 2.5.10 on
+  2026-11-25 (`SUCCESS`, 8-point plan, no controller servers).
 - `tools/replay_g8.py` and `tests/test_replay.py` (M6 S13); replay validation
   latency mean 0.0166 ms, p95 ≤0.0352 ms over 21 commands.
 
