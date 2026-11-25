@@ -1,0 +1,285 @@
+[
+    {
+        "Id": "cfd1dd03abeadd4742a8890f37f1a73dc60d2d128aabc63d0b3bbce9586799e5",
+        "Created": "2026-11-25T02:06:28.911673829Z",
+        "Path": "tail",
+        "Args": [
+            "-f",
+            "/dev/null"
+        ],
+        "State": {
+            "Status": "running",
+            "Running": true,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 1640,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2026-11-25T05:17:28.231528446Z",
+            "FinishedAt": "2026-11-25T05:17:27.089937336Z"
+        },
+        "Image": "sha256:7e823327a18754cd795978191b07ffa94ab6ea1beb0cd466df6d7f81455948b1",
+        "ResolvConfPath": "/var/lib/docker/containers/cfd1dd03abeadd4742a8890f37f1a73dc60d2d128aabc63d0b3bbce9586799e5/resolv.conf",
+        "HostnamePath": "/var/lib/docker/containers/cfd1dd03abeadd4742a8890f37f1a73dc60d2d128aabc63d0b3bbce9586799e5/hostname",
+        "HostsPath": "/var/lib/docker/containers/cfd1dd03abeadd4742a8890f37f1a73dc60d2d128aabc63d0b3bbce9586799e5/hosts",
+        "LogPath": "/var/lib/docker/containers/cfd1dd03abeadd4742a8890f37f1a73dc60d2d128aabc63d0b3bbce9586799e5/cfd1dd03abeadd4742a8890f37f1a73dc60d2d128aabc63d0b3bbce9586799e5-json.log",
+        "Name": "/ArmPiUltra",
+        "RestartCount": 0,
+        "Driver": "overlay2",
+        "Platform": "linux",
+        "MountLabel": "",
+        "ProcessLabel": "",
+        "AppArmorProfile": "",
+        "ExecIDs": [
+            "d46be553c4e8c60e5e499e1900fc8d5a860387911f2f1c99d14e0d9712bccbb9",
+            "2b9187c5ff648f71e7b8da0e3536ec25fc5b0b6a206d977e7f6cb178d2aab32d",
+            "3cbe99aa0f9fa6da7566cdbb48c7bf60435a9a6fb725419b30c6f51a3d8d7d3c",
+            "25696c60c804d1421e087431fa7f7d5ffe4cbc248570890e4f7772e96f4eee0e",
+            "cb8ccb6ff05257732ff6433375cf3cc0d1c67b288d62a428e7857766f650d1d8",
+            "79fc41ec670992db65a35b138d420b88e86e01c116f9589e0a5af515f3962f22",
+            "b9d74da65366a77ac374bb2625d39bce0c35a8b912ea108994acc02116ffcdf7",
+            "a4d6b18f9006cf00abe97e0076208f300fb1b0c817db5fe03d21f9a84f585900",
+            "f2ebca01e99eb946b0a3ef8b4aaa4f4d1b66c2af1cacaf8ee8854e0368f99a3e",
+            "4749f794220f0955045355c5b133f8ee28c80ab42009239601abc3ffdf182a17",
+            "c96b28c5ce5f8ec766f8732f93eea11555a3cba9c147f9da652ac15ef46fb120"
+        ],
+        "HostConfig": {
+            "Binds": [
+                "/tmp/.X11-unix:/tmp/.X11-unix",
+                "/var/lib/dbus:/var/lib/dbus",
+                "/dev:/dev",
+                "/etc/asound.conf:/etc/asound.conf",
+                "/etc/machine-id:/etc/machine-id",
+                "/home/pi/docker/tmp:/home/ubuntu/shared",
+                "/run/user/1000/bus:/run/user/1000/bus",
+                "/run/user/1000/pulse:/run/user/1000/pulse"
+            ],
+            "ContainerIDFile": "",
+            "LogConfig": {
+                "Type": "json-file",
+                "Config": {}
+            },
+            "NetworkMode": "host",
+            "PortBindings": {},
+            "RestartPolicy": {
+                "Name": "always",
+                "MaximumRetryCount": 0
+            },
+            "AutoRemove": false,
+            "VolumeDriver": "",
+            "VolumesFrom": null,
+            "ConsoleSize": [
+                0,
+                0
+            ],
+            "CapAdd": null,
+            "CapDrop": null,
+            "CgroupnsMode": "private",
+            "Dns": [],
+            "DnsOptions": [],
+            "DnsSearch": [],
+            "ExtraHosts": null,
+            "GroupAdd": null,
+            "IpcMode": "private",
+            "Cgroup": "",
+            "Links": null,
+            "OomScoreAdj": 0,
+            "PidMode": "",
+            "Privileged": true,
+            "PublishAllPorts": false,
+            "ReadonlyRootfs": false,
+            "SecurityOpt": [
+                "label=disable"
+            ],
+            "UTSMode": "",
+            "UsernsMode": "",
+            "ShmSize": 67108864,
+            "Runtime": "runc",
+            "Isolation": "",
+            "CpuShares": 0,
+            "Memory": 0,
+            "NanoCpus": 0,
+            "CgroupParent": "",
+            "BlkioWeight": 0,
+            "BlkioWeightDevice": [],
+            "BlkioDeviceReadBps": [],
+            "BlkioDeviceWriteBps": [],
+            "BlkioDeviceReadIOps": [],
+            "BlkioDeviceWriteIOps": [],
+            "CpuPeriod": 0,
+            "CpuQuota": 0,
+            "CpuRealtimePeriod": 0,
+            "CpuRealtimeRuntime": 0,
+            "CpusetCpus": "",
+            "CpusetMems": "",
+            "Devices": [
+                {
+                    "PathOnHost": "/dev/snd",
+                    "PathInContainer": "/dev/snd",
+                    "CgroupPermissions": "rwm"
+                }
+            ],
+            "DeviceCgroupRules": null,
+            "DeviceRequests": null,
+            "MemoryReservation": 0,
+            "MemorySwap": 0,
+            "MemorySwappiness": null,
+            "OomKillDisable": null,
+            "PidsLimit": null,
+            "Ulimits": [],
+            "CpuCount": 0,
+            "CpuPercent": 0,
+            "IOMaximumIOps": 0,
+            "IOMaximumBandwidth": 0,
+            "MaskedPaths": null,
+            "ReadonlyPaths": null
+        },
+        "GraphDriver": {
+            "Data": {
+                "ID": "cfd1dd03abeadd4742a8890f37f1a73dc60d2d128aabc63d0b3bbce9586799e5",
+                "LowerDir": "/var/lib/docker/overlay2/547323ef56cb904b8cdf098cfe22b15f629f434c268ae84a0882c9cc57ca8c2f-init/diff:/var/lib/docker/overlay2/f759b6e233bc5a8b0b8faf86bfa9212b93bace0a48dd129b9d8194eeb579e3f1/diff",
+                "MergedDir": "/var/lib/docker/overlay2/547323ef56cb904b8cdf098cfe22b15f629f434c268ae84a0882c9cc57ca8c2f/merged",
+                "UpperDir": "/var/lib/docker/overlay2/547323ef56cb904b8cdf098cfe22b15f629f434c268ae84a0882c9cc57ca8c2f/diff",
+                "WorkDir": "/var/lib/docker/overlay2/547323ef56cb904b8cdf098cfe22b15f629f434c268ae84a0882c9cc57ca8c2f/work"
+            },
+            "Name": "overlay2"
+        },
+        "Mounts": [
+            {
+                "Type": "bind",
+                "Source": "/run/user/1000/bus",
+                "Destination": "/run/user/1000/bus",
+                "Mode": "",
+                "RW": true,
+                "Propagation": "rprivate"
+            },
+            {
+                "Type": "bind",
+                "Source": "/run/user/1000/pulse",
+                "Destination": "/run/user/1000/pulse",
+                "Mode": "",
+                "RW": true,
+                "Propagation": "rprivate"
+            },
+            {
+                "Type": "bind",
+                "Source": "/tmp/.X11-unix",
+                "Destination": "/tmp/.X11-unix",
+                "Mode": "",
+                "RW": true,
+                "Propagation": "rprivate"
+            },
+            {
+                "Type": "bind",
+                "Source": "/var/lib/dbus",
+                "Destination": "/var/lib/dbus",
+                "Mode": "",
+                "RW": true,
+                "Propagation": "rprivate"
+            },
+            {
+                "Type": "bind",
+                "Source": "/dev",
+                "Destination": "/dev",
+                "Mode": "",
+                "RW": true,
+                "Propagation": "rprivate"
+            },
+            {
+                "Type": "bind",
+                "Source": "/etc/asound.conf",
+                "Destination": "/etc/asound.conf",
+                "Mode": "",
+                "RW": true,
+                "Propagation": "rprivate"
+            },
+            {
+                "Type": "bind",
+                "Source": "/etc/machine-id",
+                "Destination": "/etc/machine-id",
+                "Mode": "",
+                "RW": true,
+                "Propagation": "rprivate"
+            },
+            {
+                "Type": "bind",
+                "Source": "/home/pi/docker/tmp",
+                "Destination": "/home/ubuntu/shared",
+                "Mode": "",
+                "RW": true,
+                "Propagation": "rprivate"
+            }
+        ],
+        "Config": {
+            "Hostname": "raspberrypi",
+            "Domainname": "",
+            "User": "",
+            "AttachStdin": false,
+            "AttachStdout": false,
+            "AttachStderr": false,
+            "Tty": false,
+            "OpenStdin": false,
+            "StdinOnce": false,
+            "Env": [
+                "LC_ALL=C.UTF-8",
+                "XAUTHORITY=",
+                "DISPLAY=:0",
+                "PULSE_SERVER=unix:/run/user/1000/pulse/native",
+                "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus",
+                "LIBGL_ALWAYS_SOFTWARE=1",
+                "LANG=C.UTF-8"
+            ],
+            "Cmd": [
+                "tail",
+                "-f",
+                "/dev/null"
+            ],
+            "Image": "armpi-ultra:flatten-20261125",
+            "Volumes": null,
+            "WorkingDir": "",
+            "Entrypoint": null,
+            "OnBuild": null,
+            "Labels": {}
+        },
+        "NetworkSettings": {
+            "Bridge": "",
+            "SandboxID": "9ab4054e14d23c012bcc939703084cfb9318194d53a72e4e9b5763e2cdce2777",
+            "SandboxKey": "/var/run/docker/netns/default",
+            "Ports": {},
+            "HairpinMode": false,
+            "LinkLocalIPv6Address": "",
+            "LinkLocalIPv6PrefixLen": 0,
+            "SecondaryIPAddresses": null,
+            "SecondaryIPv6Addresses": null,
+            "EndpointID": "",
+            "Gateway": "",
+            "GlobalIPv6Address": "",
+            "GlobalIPv6PrefixLen": 0,
+            "IPAddress": "",
+            "IPPrefixLen": 0,
+            "IPv6Gateway": "",
+            "MacAddress": "",
+            "Networks": {
+                "host": {
+                    "IPAMConfig": null,
+                    "Links": null,
+                    "Aliases": null,
+                    "MacAddress": "",
+                    "DriverOpts": null,
+                    "GwPriority": 0,
+                    "NetworkID": "e2e70d28cb0a7f72e855d4163ca3d2e12208a8fe26051c6367a0ab1f7823e3eb",
+                    "EndpointID": "ea58de7eff85d4b9afe7ea974a42ef2ff1e85dc3814f326dc0115209ccb3cc4c",
+                    "Gateway": "",
+                    "IPAddress": "",
+                    "IPPrefixLen": 0,
+                    "IPv6Gateway": "",
+                    "GlobalIPv6Address": "",
+                    "GlobalIPv6PrefixLen": 0,
+                    "DNSNames": null
+                }
+            }
+        }
+    }
+]

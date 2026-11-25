@@ -1,0 +1,25 @@
+[Unit]
+Description=ArmPi D435i depth driver (realsense2_camera, inside the ArmPiUltra container)
+After=docker.service network-online.target start_node.service
+Wants=network-online.target start_node.service
+Requires=docker.service
+# start_node.sh runs ~/.stop_ros.sh first, which `kill -9`s every process whose
+# command line contains "ros" - starting before it means being killed (exit 137).
+# The depth nodes must also be opened before ext_cam claims /dev/video4,
+# otherwise librealsense gets EBUSY on VIDIOC_S_FMT. armpi-ext-cam.service
+# carries a drop-in that waits for the depth topic (20-after-depth.conf).
+Before=armpi-ext-cam.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/lib/armpi-rs-depth/rs-depth-run.sh
+# Killing the docker-exec wrapper does not kill the in-container node, and a
+# node left behind keeps /dev/video0 open (the next start then fails with
+# EBUSY). Kill the launch and the node, then escalate.
+ExecStop=/bin/bash -c '/usr/bin/docker exec ArmPiUltra pkill -TERM -f "ros2 launch realsense2_camera" || true; /usr/bin/docker exec ArmPiUltra pkill -TERM -f "realsense2_camera_node" || true; for i in 1 2 3 4 5; do /usr/bin/docker exec ArmPiUltra pgrep -f realsense2_camera_node >/dev/null || exit 0; sleep 1; done; /usr/bin/docker exec ArmPiUltra pkill -KILL -f "realsense2_camera_node" || true'
+TimeoutStopSec=30
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,28 @@
+[Unit]
+Description=ArmPi Debug Studio read-only gateway (inside the ArmPiUltra container)
+Documentation=file:/usr/local/lib/armpi-gateway/README.md
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+# The installer substitutes these two placeholders. The service does not need
+# root: the host-side wrapper only runs `docker exec`, and the in-container
+# gateway already runs as the vendor `ubuntu` user (uid 1000).
+User=pi
+Group=docker
+EnvironmentFile=/etc/armpi-gateway/gateway.env
+ExecStart=/usr/local/lib/armpi-gateway/armpi-gateway-run.sh
+# `docker exec` may not forward signals to the command inside the container.
+# Stop the in-container gateway explicitly; the gateway turns SIGTERM into a
+# clean rclpy/HTTP shutdown. The `--port 8765` pattern and the `--` option
+# terminator keep a separately started pose instance on 8766 alive
+# (2026-11-21); without `--`, pkill parses the leading `--port` as its option.
+ExecStop=/bin/bash -c '/usr/bin/docker exec ArmPiUltra pkill -TERM -f -- "armpi_debug_gateway.main.*--port 8765" || true'
+TimeoutStopSec=20
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

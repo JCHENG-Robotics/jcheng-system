@@ -1,0 +1,15 @@
+[Unit]
+Description=ArmPi camera vision launch (inside the ArmPiUltra container)
+Documentation=file:/home/jerichocheng/jcheng/jcheng-manipulation/docs/hardware/ros_environment.md
+Requires=docker.service
+After=docker.service start_node.service network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/armpi-vision-start.sh
+ExecStop=/usr/bin/docker exec ArmPiUltra pkill -f vision.launch.py
+TimeoutStartSec=180
+
+[Install]
+WantedBy=multi-user.target
