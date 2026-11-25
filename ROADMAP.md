@@ -1,7 +1,8 @@
 # jcheng-system roadmap
 
-> Status: **v0.3.0-dev** as of 2026-11-24. The system runtime has passed M4
-> read-only and the core of M5.2; M6 execution remains.
+> Status: **v0.3.0-dev** as of 2026-11-25. M4 read-only, M5.2 core motion and
+> the M6 S13 replay plus S17 real MoveIt plan-only are verified; S14 base,
+> full G8 and the S7/S9 residuals remain.
 
 ## Current state
 
@@ -11,9 +12,11 @@
 | M4 read-only telemetry | Complete (2026-11-23) | 1799/1799 `measured`, `writes=0` |
 | M5.1 mock ROS transport | Complete (2026-11-24) | 5 `tests_ros`; CI `m5-mock` |
 | M5.2 supervised joint/gripper | Complete, core (2026-11-24) | joint1 505 vs 512; gripper 183→645 / 647→183 |
-| M6 S13 replay | Complete (2026-11-24) | 21/21 decisions |
+| M6 S13 replay | Complete (2026-11-24) | 21/21 decisions; validation latency mean 0.0166 ms, p95 ≤0.0352 ms |
 | M6 S17 plan-only | Complete, offline (2026-11-24) | `test_moveit_plan_only.py` |
-| M6 real MoveIt / S14 base / full G8 | Not started | — |
+| M6 S17 real MoveIt plan-only | Complete (2026-11-25) | `SUCCESS`, 8-point plan, 0 controller servers, no command topics; `docs/M6-SCOPE.md` |
+| ArmPi Ultra runtime image | Complete (2026-11-25) | `armpi-ultra:flatten-20261125`, 7.1 GB; `deploy/armpi-ultra/docs/ACCEPTANCE-20261125.md` |
+| M6 S14 base / full G8 | Not started | — |
 | S7 stale-state injection, S9 runtime publisher | Not verified | — |
 
 ## Milestones
@@ -25,7 +28,7 @@
 | M4 | Read-only bridge, gateway, domain config | Complete (2026-11-23) | 30 min, `writes=0` | `docs/M4-SCOPE.md` |
 | M5.1 | Mock ROS services/actions, lease, safety, stop latch | Complete (2026-11-24) | 5 ROS tests; `m5-mock` | `docs/M5-SCOPE.md` |
 | M5.2 | Supervised hardware joint and gripper | Complete, core (2026-11-24) | `COMPLETED` + `bus_verified`; stop latches | `docs/M5-SCOPE.md` |
-| M6 | Replay and MoveIt plan-only | In progress | S13 21/21; S17 offline; real MoveIt/S14/G8 | `docs/M6-SCOPE.md` |
+| M6 | Replay and MoveIt plan-only | In progress — S13 21/21 and S17 real pass; S14 base and full G8 pending | `docs/M6-SCOPE.md` |
 | M7 | Integrated capability through the system API | Planned | A capability passes L3 and supervised L5 | — |
 | M8 | System v1.0 with safety case and lockfile freeze | Planned | All gates green; no open residual | — |
 
@@ -33,10 +36,13 @@
 
 1. **Finish M5.2 residuals.** Run S7 stale-state injection and S9 runtime
    publisher detection in a supervised hardware session.
-2. **Finish M6.** Real MoveIt plan-only (S17), S14 hardware base, full G8
-   re-run and landing evidence. Prerequisites: separate explicit
-   authorization, operator present.
-3. **Domain bridge.** Implement the vendor-domain → 41/42 bridge required
+2. **Finish M6.** S17 real MoveIt plan-only passed on 2026-11-25; S14 hardware
+   base, full G8 re-run and landing evidence remain. Prerequisites: separate
+   explicit authorization, operator present.
+3. **Maintain the published image.** `deploy/armpi-ultra/container/image.lock`
+   records the 2026-11-25 `armpi-ultra:flatten-20261125` digest; re-record it on
+   every image change.
+4. **Domain bridge.** Implement the vendor-domain → 41/42 bridge required
    before a capability module can consume telemetry without joining domain 0.
 
 ## Out of scope
