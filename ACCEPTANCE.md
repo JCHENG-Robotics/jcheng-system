@@ -30,7 +30,7 @@
 | M4 hardware read-only | L5 | pass — 30 min, 1799/1799 `measured`, `writes=0` | `jcheng-manipulation/docs/ecosystem/evidence/m4-readonly-20261123/` |
 | M5.1 ROS transport | L2–L3 | pass — 5 tests | `tests_ros/`; CI `m5-mock` |
 | M5.2 hardware motion | L5 | inconclusive — joint, gripper, stop, lease/limit rejection pass; S7/S9 not run | `jcheng-manipulation/docs/ecosystem/evidence/m52-final-20261124/` |
-| M6 S13 replay | L4 | pass — 21/21 decisions | `jcheng-manipulation/docs/ecosystem/evidence/m6-s13-20261124/` |
+| M6 S13 replay | L4 | pass — 21/21 decisions; validate mean 0.0166 ms, p95 ≤0.0352 ms | `jcheng-manipulation/docs/ecosystem/evidence/m6-s13-20261124/` |
 | M6 S17 plan-only | L1 | pass — construction and rejection tests | `tests/test_moveit_plan_only.py` |
 
 ## 3. Verified claims
@@ -104,6 +104,8 @@
 - `tests/test_replay.py` passes synthetic valid/invalid cases.
 - `jcheng_moveit/plan_only.py` constructs and validates `plan_only=true` and
   rejects execute/trajectory; `tests/test_moveit_plan_only.py` passes.
+- Validation latency over the 21 replayed commands: mean 0.0166 ms,
+  p95 ≤0.0352 ms, max 0.0352 ms.
 - No motion was executed.
 
 ## 4. Not verified
