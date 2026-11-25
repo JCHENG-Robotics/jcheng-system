@@ -164,7 +164,7 @@ arm or reset routes.
 | Read-only integration writes nothing | Verified (L5) | 30 min, 1799/1799 `measured`, `writes=0` |
 | Mock ROS lease/safety/action/stop | Verified (L2–L3) | 5 `tests_ros`; CI `m5-mock` |
 | Supervised joint/gripper motion | Verified, core (L5) | 505 vs 512 pulses; gripper 183→645 / 647→183 |
-| S13 replay decisions | Verified (L4) | 21/21; `e2e/` report |
+| S13 replay decisions | Verified (L4) | 21/21; validate mean 0.0166 ms, p95 ≤0.0352 ms |
 | S17 plan-only construction | Verified (L1) | `test_moveit_plan_only.py` |
 | Real MoveIt plan-only, S14 base, full G8 | Unverified | Not run |
 | S7 stale-state injection, S9 runtime publisher | Unverified | Not run on hardware |
