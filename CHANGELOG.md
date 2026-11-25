@@ -8,6 +8,9 @@ All notable changes to this project are documented here. Format based on
 
 ### Added
 
+- `scripts/humble_ci.sh`: local Humble build/test wrapper (m3, m4, m5-mock,
+  m5-vendor, m6) in the `armpi-humble-moveit` image, with a disposable
+  workspace copy. CI remains the artifact authority.
 - `jcheng_hardware/readonly.py`: a read-only bus bridge with strictly
   increasing servo IDs, 0–1000 pulse validation and no publish/write API.
 - `jcheng_telemetry`: telemetry cache with a `measured`/`commanded`
@@ -26,7 +29,8 @@ All notable changes to this project are documented here. Format based on
   publisher, single-joint/gripper execution, `GetBusServoState` verification and
   stop latch/hold.
 - `jcheng_moveit` plan-only goal construction/validation (M6 S17), rejecting
-  execute/trajectory requests.
+  execute/trajectory requests; verified against real MoveIt 2.5.10 on
+  2026-11-25 (`SUCCESS`, 8-point plan, no controller servers).
 - `tools/replay_g8.py` and `tests/test_replay.py` (M6 S13); replay validation
   latency mean 0.0166 ms, p95 ≤0.0352 ms over 21 commands.
 

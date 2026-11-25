@@ -10,7 +10,7 @@
 | L2 | Mock 集成 | 进程内 | 否 | 通过 |
 | L3 | Mock E2E | Mock 网关/总线 | 否 | 通过 |
 | L4 | 回放 | 录制数据 | 否 | S13 21/21 决策一致 |
-| L5 | 实机 | 域 0/41/42 | 是 | M4 只读、M5.2 核心通过；M6 G8 未开始 |
+| L5 | 实机 | 域 0/41/42 | 是 | M4 只读、M5.2 核心通过；M6 S17 真实 MoveIt 只规划通过；G8 未开始 |
 
 ## M3 结果
 
@@ -70,7 +70,7 @@
 - 残余：S7 状态过期注入、S9 运行时发布者检测未单独实机验证。
 - 证据：`jcheng-manipulation/docs/ecosystem/evidence/m52-final-20261124/`。
 
-## M6 结果（离线 S13，2026-11-24）
+## M6 结果（S13 离线 + S17 真实 MoveIt 只规划，2026-11-24/25）
 
 - `g8_acceptance_20261123/g8_run.json`：11/11 条命令 decision 一致。
 - `studio_g8_fast/20261121/run2.json`：10/10 条命令一致。
@@ -79,7 +79,17 @@
 - `tests/test_replay.py`：合成 valid/invalid 用例通过。
 - `jcheng_moveit/plan_only.py`：构造/校验 `plan_only=true`，拒绝 execute/trajectory；
   `tests/test_moveit_plan_only.py` 通过。
-- **未执行运动**；真实 MoveIt plan-only、S14 实机底盘、G8 实机待授权。
+- 真实 MoveIt：2.5.10 arm64、vendor 配置 0.3.0、domain 42、CycloneDDS、
+  OMPL RRTConnect；启动 `allow_trajectory_execution:=false`。
+- 单个 `MoveGroup` goal（group `arm`、自带 start、target `joint1=0.10`、
+  `plan_only=true`）返回 `SUCCESS`、8 点轨迹、规划 0.050016 s。
+- 无执行路径：`/arm_controller`、`/gripper_controller` 的
+  FollowJointTrajectory action 各 0 个服务端；无命令 topic；未发送
+  `/execute_trajectory` goal。
+- 厂商配置要求 TRAC-IK，但 arm64 无包；本地副本改用 KDL +
+  `position_only_ik=true`（原文件保留为 `kinematics.yaml.trac-ik`）。
+- **未执行运动**；S14 实机底盘、G8 实机及 MoveIt 轨迹执行待授权。
+- 证据：`jcheng-manipulation/docs/ecosystem/evidence/m6-s17-20261125/`。
 
 ## 通过标准（M3）
 
@@ -100,6 +110,8 @@
 
 - M3 是 Mock；M4 只读接入已在机器人上通过。
 - M5.2 核心实机验收通过；S7 状态过期注入、S9 运行时发布者检测仍未验证。
+- M6 S17 真实 MoveIt 只规划通过；使用 KDL（arm64 无 TRAC-IK 包），
+  轨迹执行、S14 底盘与 G8 全流程仍未验证。
 - M4 遥测运行在厂商域 0；域 0→41/42 桥接尚未实现。
 - 没有急停/抱闸/独立编码器/自碰撞模型。
 - 底盘 `open_loop`，没有里程计。
