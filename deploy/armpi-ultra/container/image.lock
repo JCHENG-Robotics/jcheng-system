@@ -4,7 +4,9 @@
 # no image argument is given. Re-record this file on every image change.
 tag: armpi-ultra:flatten-20261125
 image_id: sha256:7e823327a18754cd795978191b07ffa94ab6ea1beb0cd466df6d7f81455948b1
-digest: not-pushed
+digest: ghcr.io/jcheng-robotics/armpi-ultra@sha256:d4e6f3901f1c43e08f4018ff7f7b55dec21b2955dba8b98404a440a1f89df15f
+registry: ghcr.io/jcheng-robotics/armpi-ultra:20261125 (linux/arm64, compressed layer 2.79GB)
+published: 2026-11-25
 size: 7.1GB
 created: 2026-11-25T10:06:10+08:00
 platform: linux/arm64 (Raspberry Pi 5, Debian 12 bookworm)
@@ -19,5 +21,7 @@ verified: 2026-11-25 10:10-10:14 HKT — 20 ROS nodes and 60 topics identical to
   ~3.9Hz; all units active with zero restarts.
 notes: >
   Imported images carry no ENV/ENTRYPOINT; the container environment is supplied
-  entirely by container/run.sh. The image has no publisher; if it is pushed to a
-  registry, add the manifest digest here.
+  entirely by container/run.sh. The registry image is a faithful copy of the
+  robot's layer: entry count (249,140) and file hashes were checked against the
+  source. Importing it on an amd64 host requires `docker import --platform
+  linux/arm64`; the pushed manifest is linux/arm64.
