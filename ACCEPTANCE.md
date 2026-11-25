@@ -92,6 +92,9 @@
   `COMPLETED`, `bus_verified=true`. The gripper uses the baseline semantics:
   timed completion + bus evidence + direction/minimum displacement, without an
   exact pulse requirement.
+- History: three earlier attempts under the exact ±8 pulse criterion latched
+  `UNKNOWN` (170→183, 194→207, 640→620/619); see
+  [M5 scope](docs/M5-SCOPE.md) and `docs/ACCEPTANCE.zh-CN.md`.
 - Stop: `ABORTED`/`STOP_LATCHED`, hold 0.266 ms, client 48.4 ms. After the stop
   the action server no longer exists and new commands are rejected.
 - No lease → `NO_LEASE`; out of limit → `JOINT_LIMIT`; both rejected.

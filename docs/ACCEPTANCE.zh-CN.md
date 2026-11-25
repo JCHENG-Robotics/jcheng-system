@@ -64,6 +64,9 @@
 - 夹爪闭 183→645（目标 700）、开 647→183（目标 170）：
   均 `COMPLETED`、`bus_verified=true`。夹爪采用基线语义：定时完成 +
   总线证据 + 方向/最小位移，不要求精确 pulse。
+- 历史：改用基线语义前，夹爪三次按 ±8 pulse 精确判据尝试：
+  170→183、194→207、640→620/619，均 `MOTION_OUTCOME_UNKNOWN`/`STOP_LATCHED`；
+  未自动重试。实际可达行程约 183–619 pulses，窄于名义 170–700。
 - 停止：`ABORTED`/`STOP_LATCHED`，hold 0.266 ms，客户端 48.4 ms。
 - 停止运行时后 action server 不存在，新命令被拒。
 - 无租约 `NO_LEASE`、越限 `JOINT_LIMIT` 均拒绝。

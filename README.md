@@ -170,6 +170,12 @@ arm or reset routes.
 | S14 base, full G8 | Unverified | Not run |
 | S7 stale-state injection, S9 runtime publisher | Unverified | Not run on hardware |
 
+Three earlier gripper attempts, made under the exact ±8 pulse criterion before
+the baseline timed-completion semantics were adopted, latched `UNKNOWN`
+(170→183, 194→207, 640→620/619 pulses). The accepted result is the final run in
+the table; the failed attempts are kept as history in
+[M5 scope](docs/M5-SCOPE.md).
+
 Full report: [ACCEPTANCE.md](ACCEPTANCE.md).
 
 ## 7. Related repositories

@@ -39,6 +39,9 @@ All notable changes to this project are documented here. Format based on
 - Gripper completion now follows the baseline semantics: timed completion plus
   bus evidence plus direction/minimum displacement, without an exact pulse
   requirement; the arm keeps the ±8 pulse tolerance.
+- Recorded the three pre-fix gripper attempts that latched `UNKNOWN` under the
+  exact ±8 pulse criterion (170→183, 194→207, 640→620/619). The timed semantics
+  above supersede them; the accepted run is 183→645 close and 647→183 open.
 - The bus default rate is 4 Hz; the gateway token is read from the environment;
   shutdown no longer calls `rclpy.shutdown` twice.
 
