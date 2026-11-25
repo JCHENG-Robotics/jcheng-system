@@ -16,6 +16,7 @@ import argparse
 import json
 from pathlib import Path
 import sys
+import time
 from typing import Any
 
 from jcheng_system_core.config import RobotProfile, load_contract
@@ -192,7 +193,9 @@ def replay_file(
             motion = _command_from_baseline(
                 baseline, targets, profile, contract, current, index, normalizations
             )
+            started = time.perf_counter()
             report = safety.validate(motion, lease_ok=True, lease_code="OK")
+            latency_ms = (time.perf_counter() - started) * 1000.0
             expected = bool(command.get("preview", {}).get("valid", False))
             record = {
                 "index": index,
@@ -205,6 +208,7 @@ def replay_file(
                 "actual_reason": report.reason_code,
                 "violations": list(report.violations),
                 "normalizations": normalizations,
+                "validate_latency_ms": latency_ms,
                 "match": bool(report.approved) == expected,
             }
             records.append(record)
@@ -214,6 +218,16 @@ def replay_file(
             index += 1
 
     mismatches = [record for record in records if not record["match"]]
+    latencies = sorted(record["validate_latency_ms"] for record in records)
+    latency_summary = {}
+    if latencies:
+        latency_summary = {
+            "samples": len(latencies),
+            "min_ms": latencies[0],
+            "mean_ms": sum(latencies) / len(latencies),
+            "p95_ms": latencies[min(len(latencies) - 1, int(len(latencies) * 0.95))],
+            "max_ms": latencies[-1],
+        }
     return {
         "schema_version": 1,
         "kind": "s13_replay",
@@ -222,6 +236,7 @@ def replay_file(
         "matched": len(records) - len(mismatches),
         "mismatched": len(mismatches),
         "match_rate": (len(records) - len(mismatches)) / len(records) if records else 0.0,
+        "validation_latency_ms": latency_summary,
         "ok": not mismatches,
         "records": records,
     }

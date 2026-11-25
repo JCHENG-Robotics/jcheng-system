@@ -1,11 +1,12 @@
 # Acceptance report — jcheng-system
 
-> Status: **inconclusive** as of 2026-11-24 for v0.3.0-dev.
+> Status: **inconclusive** as of 2026-11-25 for v0.3.0-dev.
 > Operator: JerichoCheng. Reviewer: pending.
 > Scope: M3 mock stack, M4 read-only integration, M5.1 mock transport,
-> M5.2 supervised hardware motion and M6 offline replay/plan-only.
-> The completed gates pass; the M6 execution gates and the S7/S9 residuals have
-> not run, so the system acceptance is not complete.
+> M5.2 supervised hardware motion and M6 offline replay/plan-only, plus the
+> real MoveIt plan-only check.
+> The completed gates pass; S14/G8 execution, S7/S9 and trajectory execution
+> have not run, so the system acceptance is not complete.
 > No motion was sent by this documentation change.
 
 ## 1. Acceptance layers
@@ -30,8 +31,9 @@
 | M4 hardware read-only | L5 | pass — 30 min, 1799/1799 `measured`, `writes=0` | `jcheng-manipulation/docs/ecosystem/evidence/m4-readonly-20261123/` |
 | M5.1 ROS transport | L2–L3 | pass — 5 tests | `tests_ros/`; CI `m5-mock` |
 | M5.2 hardware motion | L5 | inconclusive — joint, gripper, stop, lease/limit rejection pass; S7/S9 not run | `jcheng-manipulation/docs/ecosystem/evidence/m52-final-20261124/` |
-| M6 S13 replay | L4 | pass — 21/21 decisions | `jcheng-manipulation/docs/ecosystem/evidence/m6-s13-20261124/` |
+| M6 S13 replay | L4 | pass — 21/21 decisions; validate mean 0.0166 ms, p95 ≤0.0352 ms | `jcheng-manipulation/docs/ecosystem/evidence/m6-s13-20261124/` |
 | M6 S17 plan-only | L1 | pass — construction and rejection tests | `tests/test_moveit_plan_only.py` |
+| M6 S17 real MoveIt plan-only | L5 | pass — MoveIt 2.5.10, `SUCCESS`, 8-point plan, 0 controller servers, no command topics | `jcheng-manipulation/docs/ecosystem/evidence/m6-s17-20261125/` |
 
 ## 3. Verified claims
 
@@ -107,7 +109,29 @@
 - `tests/test_replay.py` passes synthetic valid/invalid cases.
 - `jcheng_moveit/plan_only.py` constructs and validates `plan_only=true` and
   rejects execute/trajectory; `tests/test_moveit_plan_only.py` passes.
+- Validation latency over the 21 replayed commands: mean 0.0166 ms,
+  p95 ≤0.0352 ms, max 0.0352 ms.
 - No motion was executed.
+
+### M6 — real MoveIt plan-only (2026-11-25)
+
+- MoveIt 2.5.10 arm64 (`ros-humble-moveit-ros-move-group`) with the vendor
+  `armpi_ultra_moveit_config` 0.3.0 on the ArmPi container; domain 42,
+  CycloneDDS, OMPL RRTConnect.
+- `move_group.launch.py allow_trajectory_execution:=false`; no controller
+  manager was started.
+- One `MoveGroup` goal (`group=arm`, start supplied, target `joint1=0.10`,
+  `plan_only=true`) returned `SUCCESS`, 8 trajectory points, planning time
+  0.050016 s.
+- No execution path: `/arm_controller` and `/gripper_controller`
+  FollowJointTrajectory actions had 0 servers, no command topics existed, and
+  no `/execute_trajectory` goal was sent.
+- The vendor config requests TRAC-IK; no arm64 package exists, so the local
+  copy uses KDL with `position_only_ik=true` (original preserved as
+  `kinematics.yaml.trac-ik`). This is a local config adaptation, not a
+  repository change.
+- Evidence: `jcheng-manipulation/docs/ecosystem/evidence/m6-s17-20261125/`.
+- No robot motion command was sent.
 
 ## 4. Not verified
 
@@ -115,7 +139,8 @@
 |---|---|---|
 | S7 stale-state injection | Not run on hardware | Stale state may not be rejected as designed |
 | S9 runtime unauthorized publisher | Not run on hardware | Publisher guard is not proven at runtime |
-| Real MoveIt plan-only (S17) | Only construction/validation was tested | Planner integration may differ |
+| Trajectory execution via MoveIt | Plan-only was requested; no controller server exists | Execution integration is unproven |
+| Pose/Cartesian goals and obstacles | Only one joint-space goal was planned | Planner behavior may differ for other goals |
 | S14 hardware base | Not run | Base intent path unproven |
 | Full G8 re-run | Not run | End-to-end system path unproven |
 | Domain 0 → 41/42 bridge | Not implemented | Capabilities cannot consume telemetry without joining domain 0 |
@@ -124,8 +149,11 @@
 
 ## 5. Limitations
 
-- M3 evidence is mock; M4 is read-only; only M5.2 core motions are hardware
-  results.
+- M3 evidence is mock; M4 is read-only; M5.2 core motions and the S17 real
+  plan-only check are the hardware results.
+- S17 used KDL rather than the vendor's TRAC-IK because no arm64 TRAC-IK package
+  exists; the planning result is real, but the IK plugin differs from the vendor
+  configuration.
 - S7/S9 residuals remain open.
 - The telemetry runs in vendor domain 0; domain isolation is not yet complete.
 - No e-stop, brake, independent encoder or self-collision model.
@@ -136,7 +164,7 @@
 
 | Role | Name | Date |
 |---|---|---|
-| Operator | JerichoCheng | 2026-11-24 |
+| Operator | JerichoCheng | 2026-11-25 |
 | Reviewer | pending | — |
 
 ## 7. Machine-readable report

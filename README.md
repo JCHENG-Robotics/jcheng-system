@@ -2,10 +2,10 @@
 
 The privileged runtime and system integration point for JCHENG Robotics.
 
-> Status: **Experimental** — v0.3.0-dev as of 2026-11-24. M4 read-only hardware
-> and M5.2 core motion are verified; M6 offline replay and plan-only are merged.
-> S7 (stale-state injection) and S9 (runtime publisher detection) are not
-> verified on hardware. The runtime is not safety-certified.
+> Status: **Experimental** — v0.3.0-dev as of 2026-11-25. M4 read-only hardware
+> and M5.2 core motion are verified; M6 offline replay and real MoveIt plan-only
+> are verified. S7 (stale-state injection) and S9 (runtime publisher detection)
+> are not verified on hardware. The runtime is not safety-certified.
 > English canonical; see [README.zh-CN.md](README.zh-CN.md) for the Chinese translation.
 
 ## 1. Deliverables
@@ -164,9 +164,10 @@ arm or reset routes.
 | Read-only integration writes nothing | Verified (L5) | 30 min, 1799/1799 `measured`, `writes=0` |
 | Mock ROS lease/safety/action/stop | Verified (L2–L3) | 5 `tests_ros`; CI `m5-mock` |
 | Supervised joint/gripper motion | Verified, core (L5) | 505 vs 512 pulses; gripper 183→645 / 647→183 |
-| S13 replay decisions | Verified (L4) | 21/21; `e2e/` report |
+| S13 replay decisions | Verified (L4) | 21/21; validate mean 0.0166 ms, p95 ≤0.0352 ms |
 | S17 plan-only construction | Verified (L1) | `test_moveit_plan_only.py` |
-| Real MoveIt plan-only, S14 base, full G8 | Unverified | Not run |
+| Real MoveIt plan-only (S17) | Verified (L5) | 2026-11-25: `SUCCESS`, 8-point plan, 0 controller servers, no command topics |
+| S14 base, full G8 | Unverified | Not run |
 | S7 stale-state injection, S9 runtime publisher | Unverified | Not run on hardware |
 
 Three earlier gripper attempts, made under the exact ±8 pulse criterion before

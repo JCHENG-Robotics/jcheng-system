@@ -1,0 +1,23 @@
+# Image the ArmPi Ultra currently boots from.
+#
+# Recorded after the 2026-11-25 flatten. `tag:` is read by container/run.sh when
+# no image argument is given. Re-record this file on every image change.
+tag: armpi-ultra:flatten-20261125
+image_id: sha256:7e823327a18754cd795978191b07ffa94ab6ea1beb0cd466df6d7f81455948b1
+digest: not-pushed
+size: 7.1GB
+created: 2026-11-25T10:06:10+08:00
+platform: linux/arm64 (Raspberry Pi 5, Debian 12 bookworm)
+base: flattened from ros:humble + container writable layer (was 11.6GB + 6.21GB)
+provenance: >
+  docker export ArmPiUltra | docker import -c 'CMD ["tail","-f","/dev/null"]' - <tag>
+  after removing 3.4GB of runtime junk inside the container. The 5.5GB of
+  ros1_bridge_ws / noetic_ws / neovim already deleted inside the container was
+  reclaimed by the import.
+verified: 2026-11-25 10:10-10:14 HKT — 20 ROS nodes and 60 topics identical to the
+  pre-change baseline; gateways 8765/8766 listening; colour ~6.5Hz / aligned depth
+  ~3.9Hz; all units active with zero restarts.
+notes: >
+  Imported images carry no ENV/ENTRYPOINT; the container environment is supplied
+  entirely by container/run.sh. The image has no publisher; if it is pushed to a
+  registry, add the manifest digest here.
