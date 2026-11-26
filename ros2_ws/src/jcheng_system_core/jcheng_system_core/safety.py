@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import wraps
 from pathlib import Path
 from typing import Any
 import math
+import threading
 
 import yaml
 
@@ -55,6 +57,17 @@ class SafetyLimits:
         )
 
 
+def _locked(method):
+    """Serialize a safety transition; the lock is reentrant."""
+
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        with self._lock:
+            return method(self, *args, **kwargs)
+
+    return wrapper
+
+
 class SafetySupervisor:
     def __init__(
         self,
@@ -67,6 +80,7 @@ class SafetySupervisor:
         self.contract = contract
         self.clock = clock
         self.limits = limits or SafetyLimits()
+        self._lock = threading.RLock()
         self.state = "DISARMED"
         self.stop_latched = False
         self.unknown_latched = False
@@ -84,6 +98,7 @@ class SafetySupervisor:
     def _bump(self) -> None:
         self.seq += 1
 
+    @_locked
     def current_state(self) -> SafetyState:
         return SafetyState(
             state=self.state,
@@ -96,6 +111,7 @@ class SafetySupervisor:
             seq=self.seq,
         )
 
+    @_locked
     def latch(self, code: ErrorCode | str, message: str) -> SafetyState:
         code_value = code.value if isinstance(code, ErrorCode) else str(code)
         self.stop_latched = True
@@ -119,6 +135,7 @@ class SafetySupervisor:
             self.latch(ErrorCode.STATE_STALE, "measured state is missing or stale")
             raise MotionRejected(ErrorCode.STATE_STALE, "measured state is missing or stale")
 
+    @_locked
     def update_state(self, robot_state: RobotState, now: float | None = None) -> SafetyState:
         now = self.clock.now() if now is None else now
         self.last_state = robot_state
@@ -130,12 +147,14 @@ class SafetySupervisor:
             self.latch(ErrorCode.STATE_STALE, "robot state joint count mismatch")
         return self.current_state()
 
+    @_locked
     def heartbeat(self, now: float | None = None) -> SafetyState:
         now = self.clock.now() if now is None else now
         self.last_state_at = now
         self._bump()
         return self.current_state()
 
+    @_locked
     def tick(self, now: float | None = None) -> SafetyState:
         now = self.clock.now() if now is None else now
         if self.state in ("ARMED_IDLE", "MOTION_ACTIVE"):
@@ -143,6 +162,7 @@ class SafetySupervisor:
                 return self.latch(ErrorCode.SAFETY_HEARTBEAT_MISSING, "safety heartbeat is missing")
         return self.current_state()
 
+    @_locked
     def arm(
         self,
         operator_id: str,
@@ -172,6 +192,7 @@ class SafetySupervisor:
         self._bump()
         return self.current_state()
 
+    @_locked
     def disarm(self, operator_id: str, reason: str) -> SafetyState:
         if not operator_id.strip():
             raise MotionRejected(ErrorCode.INVALID_COMMAND, "operator_id is required")
@@ -181,6 +202,7 @@ class SafetySupervisor:
         self._bump()
         return self.current_state()
 
+    @_locked
     def reset(
         self,
         operator_id: str,
@@ -215,6 +237,7 @@ class SafetySupervisor:
         self._bump()
         return self.current_state()
 
+    @_locked
     def begin_motion(self) -> SafetyState:
         if self.state != "ARMED_IDLE" or self.stop_latched:
             raise MotionRejected(ErrorCode.SYSTEM_DISARMED, "system is not armed")
@@ -223,6 +246,7 @@ class SafetySupervisor:
         self._bump()
         return self.current_state()
 
+    @_locked
     def end_motion(self) -> SafetyState:
         self.active_motion = False
         if self.state == "MOTION_ACTIVE":
@@ -368,6 +392,7 @@ class SafetySupervisor:
             )
         return max_velocity, max_acceleration
 
+    @_locked
     def validate(
         self,
         command: MotionCommand,

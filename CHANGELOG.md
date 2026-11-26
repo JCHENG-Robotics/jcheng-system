@@ -8,6 +8,20 @@ All notable changes to this project are documented here. Format based on
 
 ### Added
 
+- `tools/concurrency_probe.py`: P0 probes C1–C5 plus a stop/execute stress
+  loop against the real mock gateway application and `MockStack`, with a
+  harness-only settle window. Loopback only; no hardware.
+- `e2e/reports/20261126_concurrency_probe/`: raw probe report and findings.
+  C2 fails: one intent produced both `ABORTED` and `COMPLETED`, and the cached
+  result was overwritten to `COMPLETED`; lease revoke/expiry during a motion
+  was not enforced.
+- `docs/EXECUTION-MODEL-REVISION.md`: proposed single-writer session state
+  machine, once-only terminal result, stop path, tick thread and stop
+  confirmation levels. Proposal only; no code or contract change.
+- `e2e/reports/20261126_concurrency_probe_r2/`: re-run evidence after R1–R4.
+  C1–C5, C5b and the 30-iteration stop/execute stress loop pass; C2 produces
+  one `ABORTED` terminal and lease loss produces `LEASE_REVOKED`/`LEASE_EXPIRED`.
+- `TickThread` in the gateway process: 20 Hz `sync_state` plus `arbiter.tick`.
 - Read-only WebSocket stream at `GET /v1/ws/state` on both the mock and
   read-only gateways. The stdlib HTTP handlers upgrade to RFC 6455 with Bearer
   authentication and send one `hello` then `state`/`safety` envelopes at about
@@ -48,6 +62,20 @@ All notable changes to this project are documented here. Format based on
 
 ### Changed
 
+- `MotionArbiter` now has a single terminal writer and a session lock:
+  `_complete_once` is the only place a result and its idempotency entry are
+  written; `stop()` completes `ABORTED` but keeps the session active until the
+  execute thread exits; `finish()` re-checks the lease before `COMPLETED`;
+  `start()` publishes under the lock. C2/C5/C5b now pass on the mock.
+- `LeaseManager` is locked and distinguishes `LEASE_REVOKED` from
+  `LEASE_EXPIRED`; `SafetySupervisor` transitions are locked.
+- The gateway process runs a 20 Hz `TickThread` (`sync_state` + `arbiter.tick`);
+  the runtime timer no longer holds the outer lock across `tick`.
+- `jcheng_runtime` no longer holds its outer lock across `execute`, `cancel`,
+  `/safety_stop` or `tick`; an action cancel can reach the arbiter during a
+  motion.
+- The roadmap records that the P0 blocker is resolved on the mock and M3 is
+  unblocked; the deployed gateway and R5 remain open.
 - Gripper completion now follows the baseline semantics: timed completion plus
   bus evidence plus direction/minimum displacement, without an exact pulse
   requirement; the arm keeps the ±8 pulse tolerance.

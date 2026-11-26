@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import wraps
+import threading
 import uuid
 
 from .errors import ErrorCode, MotionRejected
@@ -12,6 +14,17 @@ from .timebase import Clock
 SCOPES = {"arm", "gripper", "base", "full"}
 MIN_TTL_MS = 100
 MAX_TTL_MS = 300_000
+
+
+def _locked(method):
+    """Serialize a lease operation; the lock is reentrant."""
+
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        with self._lock:
+            return method(self, *args, **kwargs)
+
+    return wrapper
 
 
 @dataclass(frozen=True)
@@ -30,8 +43,10 @@ class LeaseManager:
     def __init__(self, contract: ContractVersion, clock: Clock) -> None:
         self.contract = contract
         self.clock = clock
+        self._lock = threading.RLock()
         self._leases: dict[str, Lease] = {}
         self._expired: set[str] = set()
+        self._revoked: set[str] = set()
         self.events: list[dict[str, object]] = []
 
     def _emit(self, event: str, **fields: object) -> None:
@@ -42,6 +57,7 @@ class LeaseManager:
         if mismatch:
             raise MotionRejected(mismatch[0], mismatch[1])
 
+    @_locked
     def expire(self, now: float | None = None) -> list[Lease]:
         now = self.clock.now() if now is None else now
         expired: list[Lease] = []
@@ -53,6 +69,7 @@ class LeaseManager:
                 self._emit("lease_expired", lease_id=lease_id, holder=lease.holder)
         return expired
 
+    @_locked
     def acquire(
         self,
         holder: str,
@@ -108,9 +125,11 @@ class LeaseManager:
         )
         self._leases[lease.lease_id] = lease
         self._expired.discard(lease.lease_id)
+        self._revoked.discard(lease.lease_id)
         self._emit("lease_acquired", lease_id=lease.lease_id, holder=holder, scope=scope)
         return lease
 
+    @_locked
     def renew(
         self,
         lease_id: str,
@@ -124,7 +143,13 @@ class LeaseManager:
             raise MotionRejected(ErrorCode.INVALID_COMMAND, "ttl_ms outside bounds")
         lease = self._leases.get(lease_id)
         if lease is None:
-            code = ErrorCode.LEASE_EXPIRED if lease_id in self._expired else ErrorCode.NO_LEASE
+            code = (
+                ErrorCode.LEASE_REVOKED
+                if lease_id in self._revoked
+                else ErrorCode.LEASE_EXPIRED
+                if lease_id in self._expired
+                else ErrorCode.NO_LEASE
+            )
             raise MotionRejected(code, "lease is not active")
         if not lease.active(now):
             del self._leases[lease_id]
@@ -146,6 +171,7 @@ class LeaseManager:
         self._emit("lease_renewed", lease_id=lease_id, holder=lease.holder)
         return renewed
 
+    @_locked
     def release(self, lease_id: str) -> bool:
         lease = self._leases.pop(lease_id, None)
         if lease is None:
@@ -153,6 +179,7 @@ class LeaseManager:
         self._emit("lease_released", lease_id=lease_id, holder=lease.holder)
         return True
 
+    @_locked
     def revoke(
         self,
         lease_id: str,
@@ -166,7 +193,8 @@ class LeaseManager:
         lease = self._leases.pop(lease_id, None)
         if lease is None:
             return False
-        self._expired.add(lease_id)
+        self._revoked.add(lease_id)
+        self._expired.discard(lease_id)
         self._emit(
             "lease_revoked",
             lease_id=lease_id,
@@ -176,13 +204,20 @@ class LeaseManager:
         )
         return True
 
+    @_locked
     def check(self, lease_id: str, scope: str, now: float | None = None) -> LeaseCheck:
         now = self.clock.now() if now is None else now
         if not lease_id:
             return LeaseCheck(False, ErrorCode.NO_LEASE.value, None, "lease_id is required")
         lease = self._leases.get(lease_id)
         if lease is None:
-            code = ErrorCode.LEASE_EXPIRED if lease_id in self._expired else ErrorCode.NO_LEASE
+            code = (
+                ErrorCode.LEASE_REVOKED
+                if lease_id in self._revoked
+                else ErrorCode.LEASE_EXPIRED
+                if lease_id in self._expired
+                else ErrorCode.NO_LEASE
+            )
             return LeaseCheck(False, code.value, None, "lease is not active")
         if not lease.active(now):
             del self._leases[lease_id]
@@ -198,11 +233,13 @@ class LeaseManager:
             )
         return LeaseCheck(True, ErrorCode.OK.value, lease, "ok")
 
+    @_locked
     def active(self, now: float | None = None) -> list[Lease]:
         now = self.clock.now() if now is None else now
         self.expire(now)
         return list(self._leases.values())
 
+    @_locked
     def owner(self, scope: str, now: float | None = None) -> Lease | None:
         for lease in self.active(now):
             if lease.scope == "full" or lease.scope == scope:

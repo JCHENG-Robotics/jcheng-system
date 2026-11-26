@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 from dataclasses import dataclass
+import threading
 import time
 
 from .authority import LeaseManager
@@ -28,6 +29,7 @@ class ActiveMotion:
     command: MotionCommand
     report: ValidationReport
     started_at: float
+    terminal: MotionResult | None = None
 
 
 class MotionArbiter:
@@ -52,6 +54,7 @@ class MotionArbiter:
         self.guard = guard
         self.evidence = evidence or EvidenceStore(clock)
         self.max_commands_per_second = max(1, int(max_commands_per_second))
+        self._lock = threading.RLock()
         self._active: ActiveMotion | None = None
         self._idempotency: dict[str, tuple[str, MotionResult]] = {}
         self._rates: dict[str, deque[float]] = defaultdict(deque)
@@ -91,7 +94,7 @@ class MotionArbiter:
             completed_at=now,
         )
 
-    def _complete(
+    def _complete_once(
         self,
         active: ActiveMotion,
         now: float,
@@ -103,23 +106,36 @@ class MotionArbiter:
         calibration_invalidated: bool,
         measured_positions: list[float],
     ) -> MotionResult:
-        result = MotionResult(
-            intent_id=active.command.intent_id,
-            outcome=outcome,
-            reason_code=code,
-            message=message,
-            safety=self.safety.current_state(),
-            measured_positions=list(measured_positions),
-            bus_verified=bus_verified,
-            calibration_invalidated=calibration_invalidated,
-            completed_at=now,
-        )
-        result.evidence_id = self.evidence.record_motion(active.command, active.report, result)
-        self._idempotency[active.command.idempotency_key] = (
-            active.command.payload_hash(),
-            result,
-        )
-        return result
+        """Write the terminal result exactly once; the first caller wins."""
+
+        with self._lock:
+            if active.terminal is not None:
+                return active.terminal
+            result = MotionResult(
+                intent_id=active.command.intent_id,
+                outcome=outcome,
+                reason_code=code,
+                message=message,
+                safety=self.safety.current_state(),
+                measured_positions=list(measured_positions),
+                bus_verified=bus_verified,
+                calibration_invalidated=calibration_invalidated,
+                completed_at=now,
+            )
+            result.evidence_id = self.evidence.record_motion(
+                active.command, active.report, result
+            )
+            self._idempotency[active.command.idempotency_key] = (
+                active.command.payload_hash(),
+                result,
+            )
+            active.terminal = result
+            return result
+
+    def _clear_active(self, active: ActiveMotion) -> None:
+        with self._lock:
+            if self._active is active:
+                self._active = None
 
     # ---- validation ----
 
@@ -134,73 +150,105 @@ class MotionArbiter:
     # ---- execution ----
 
     def start(self, command: MotionCommand, now: float | None = None) -> MotionResult | None:
-        """Start a motion. Returns a terminal result, or None if active."""
+        """Start a motion. Returns a terminal result, or None if active.
+
+        State transitions are serialized. ``publish`` is inside the lock so a
+        concurrent stop either completes before the command is issued (and the
+        command is not published) or runs its hold after the command write.
+        """
         now = self._now(now)
-        cached = self._idempotency.get(command.idempotency_key)
-        if cached is not None:
-            cached_hash, result = cached
-            if cached_hash != command.payload_hash():
-                return self._rejected(command, ErrorCode.IDEMPOTENCY_CONFLICT.value, "idempotency key reused with a different payload", now)
-            return result
-        if self._active is not None:
-            return self._rejected(command, ErrorCode.MOTION_BUSY.value, "another motion is active", now)
-        try:
-            self._rate_limit(command.source, now)
-        except MotionRejected as exc:
-            return self._rejected(command, exc.code, exc.message, now)
-        report = self.validate(command, now)
-        if not report.approved:
-            return self._rejected(command, report.reason_code, report.violations[0] if report.violations else "validation failed", now)
-        try:
-            self.safety.begin_motion()
-        except MotionRejected as exc:
-            return self._rejected(command, exc.code, exc.message, now)
-        active = ActiveMotion(command=command, report=report, started_at=now)
-        self._active = active
-        try:
-            self.hardware.publish(command, now)
-        except BusReadFailed as exc:
-            self.safety.latch(ErrorCode.MOTION_OUTCOME_UNKNOWN, str(exc))
-            self._active = None
-            result = self._complete(
-                active,
-                now,
-                outcome="UNKNOWN",
-                code=ErrorCode.MOTION_OUTCOME_UNKNOWN.value,
-                message=str(exc),
-                bus_verified=False,
-                calibration_invalidated=False,
-                measured_positions=self.hardware.state(now).positions,
-            )
-            return result
+        with self._lock:
+            cached = self._idempotency.get(command.idempotency_key)
+            if cached is not None:
+                cached_hash, result = cached
+                if cached_hash != command.payload_hash():
+                    return self._rejected(command, ErrorCode.IDEMPOTENCY_CONFLICT.value, "idempotency key reused with a different payload", now)
+                return result
+            if self._active is not None:
+                return self._rejected(command, ErrorCode.MOTION_BUSY.value, "another motion is active", now)
+            try:
+                self._rate_limit(command.source, now)
+            except MotionRejected as exc:
+                return self._rejected(command, exc.code, exc.message, now)
+            report = self.validate(command, now)
+            if not report.approved:
+                return self._rejected(command, report.reason_code, report.violations[0] if report.violations else "validation failed", now)
+            try:
+                self.safety.begin_motion()
+            except MotionRejected as exc:
+                return self._rejected(command, exc.code, exc.message, now)
+            active = ActiveMotion(command=command, report=report, started_at=now)
+            self._active = active
+            if self.safety.stop_latched:
+                result = self._complete_once(
+                    active,
+                    now,
+                    outcome="ABORTED",
+                    code=ErrorCode.SAFETY_STOP_LATCHED.value,
+                    message="stop latched before publish",
+                    bus_verified=False,
+                    calibration_invalidated=False,
+                    measured_positions=self.hardware.state(now).positions,
+                )
+                self._clear_active(active)
+                return result
+            try:
+                self.hardware.publish(command, now)
+            except BusReadFailed as exc:
+                self.safety.latch(ErrorCode.MOTION_OUTCOME_UNKNOWN, str(exc))
+                result = self._complete_once(
+                    active,
+                    now,
+                    outcome="UNKNOWN",
+                    code=ErrorCode.MOTION_OUTCOME_UNKNOWN.value,
+                    message=str(exc),
+                    bus_verified=False,
+                    calibration_invalidated=False,
+                    measured_positions=self.hardware.state(now).positions,
+                )
+                self._clear_active(active)
+                return result
         return None
 
     def finish(self, now: float | None = None) -> MotionResult | None:
         now = self._now(now)
-        active = self._active
+        with self._lock:
+            active = self._active
         if active is None:
             return None
         command = active.command
         if command.kind == "BASE_PULSE":
             self.hardware.zero_base(now)
-            self.safety.end_motion()
-            self._active = None
-            return self._complete(
-                active,
-                now,
-                outcome="COMPLETED",
-                code=ErrorCode.OK.value,
-                message="base pulse completed (open loop)",
-                bus_verified=False,
-                calibration_invalidated=True,
-                measured_positions=self.hardware.state(now).positions,
-            )
+            if self.safety.stop_latched:
+                result = self._complete_once(
+                    active,
+                    now,
+                    outcome="ABORTED",
+                    code=ErrorCode.SAFETY_STOP_LATCHED.value,
+                    message="stop latched during base pulse",
+                    bus_verified=False,
+                    calibration_invalidated=False,
+                    measured_positions=self.hardware.state(now).positions,
+                )
+            else:
+                self.safety.end_motion()
+                result = self._complete_once(
+                    active,
+                    now,
+                    outcome="COMPLETED",
+                    code=ErrorCode.OK.value,
+                    message="base pulse completed (open loop)",
+                    bus_verified=False,
+                    calibration_invalidated=True,
+                    measured_positions=self.hardware.state(now).positions,
+                )
+            self._clear_active(active)
+            return result
         try:
             measured = self.hardware.bus_read(now)
         except BusReadFailed as exc:
             self.safety.latch(ErrorCode.MOTION_OUTCOME_UNKNOWN, str(exc))
-            self._active = None
-            return self._complete(
+            result = self._complete_once(
                 active,
                 now,
                 outcome="UNKNOWN",
@@ -210,18 +258,51 @@ class MotionArbiter:
                 calibration_invalidated=False,
                 measured_positions=self.hardware.state(now).positions,
             )
-        self.safety.end_motion()
-        self._active = None
-        return self._complete(
-            active,
-            now,
-            outcome="COMPLETED",
-            code=ErrorCode.OK.value,
-            message="motion completed with bus verification",
-            bus_verified=True,
-            calibration_invalidated=False,
-            measured_positions=measured.positions,
+            self._clear_active(active)
+            return result
+        lease = self.authority.check(
+            command.lease_id, self.scope_for_kind(command.kind), now
         )
+        if not lease.ok:
+            message = lease.message or "lease lost during motion"
+            self.safety.latch(lease.code, message)
+            self.hardware.hold(now)
+            self.hardware.zero_base(now)
+            result = self._complete_once(
+                active,
+                now,
+                outcome="ABORTED",
+                code=lease.code,
+                message=message,
+                bus_verified=False,
+                calibration_invalidated=False,
+                measured_positions=measured.positions,
+            )
+        elif self.safety.stop_latched:
+            result = self._complete_once(
+                active,
+                now,
+                outcome="ABORTED",
+                code=ErrorCode.SAFETY_STOP_LATCHED.value,
+                message="motion aborted by software stop",
+                bus_verified=False,
+                calibration_invalidated=False,
+                measured_positions=measured.positions,
+            )
+        else:
+            self.safety.end_motion()
+            result = self._complete_once(
+                active,
+                now,
+                outcome="COMPLETED",
+                code=ErrorCode.OK.value,
+                message="motion completed with bus verification",
+                bus_verified=True,
+                calibration_invalidated=False,
+                measured_positions=measured.positions,
+            )
+        self._clear_active(active)
+        return result
 
     def execute(self, command: MotionCommand, now: float | None = None) -> MotionResult:
         started = self.start(command, now)
@@ -238,39 +319,37 @@ class MotionArbiter:
         self.authority.expire(now)
         self.hardware.tick(now)
         self.safety.tick(now)
-        results: list[MotionResult] = []
-        active = self._active
-        if active is None:
-            return results
+        with self._lock:
+            active = self._active
+            if active is None or active.terminal is not None:
+                return []
         lease = self.authority.check(
             active.command.lease_id,
             self.scope_for_kind(active.command.kind),
             now,
         )
         if not lease.ok:
-            self.safety.latch(lease.code, lease.message or "lease expired or revoked")
+            message = lease.message or "lease expired or revoked"
+            self.safety.latch(lease.code, message)
             self.hardware.hold(now)
             self.hardware.zero_base(now)
-            self._active = None
-            results.append(
-                self._complete(
+            return [
+                self._complete_once(
                     active,
                     now,
                     outcome="ABORTED",
                     code=lease.code,
-                    message=lease.message,
+                    message=message,
                     bus_verified=False,
                     calibration_invalidated=False,
                     measured_positions=self.hardware.state(now).positions,
                 )
-            )
-            return results
+            ]
         if self.safety.stop_latched:
             self.hardware.hold(now)
             self.hardware.zero_base(now)
-            self._active = None
-            results.append(
-                self._complete(
+            return [
+                self._complete_once(
                     active,
                     now,
                     outcome="ABORTED",
@@ -280,29 +359,37 @@ class MotionArbiter:
                     calibration_invalidated=False,
                     measured_positions=self.hardware.state(now).positions,
                 )
-            )
-        return results
+            ]
+        return []
 
     def stop(self, operator_id: str, reason: str, now: float | None = None) -> StopResult:
         now = self._now(now)
         if not operator_id.strip():
             raise MotionRejected(ErrorCode.INVALID_COMMAND, "operator_id is required")
-        self.safety.latch(ErrorCode.SAFETY_STOP_LATCHED, f"software stop by {operator_id}: {reason}")
-        self.hardware.hold(now)
-        self.hardware.zero_base(now)
-        if self._active is not None:
-            active = self._active
-            self._active = None
-            self._complete(
-                active,
-                now,
-                outcome="ABORTED",
-                code=ErrorCode.SAFETY_STOP_LATCHED.value,
-                message="motion aborted by software stop",
-                bus_verified=False,
-                calibration_invalidated=False,
-                measured_positions=self.hardware.state(now).positions,
+        with self._lock:
+            # Latch and hold inside the session lock: a concurrent start either
+            # sees the latch and does not publish, or publishes first and this
+            # hold runs after the command write.
+            self.safety.latch(
+                ErrorCode.SAFETY_STOP_LATCHED,
+                f"software stop by {operator_id}: {reason}",
             )
+            self.hardware.hold(now)
+            self.hardware.zero_base(now)
+            active = self._active
+            if active is not None and active.terminal is None:
+                # The first terminal wins. A concurrent finish() sees it and
+                # returns it instead of writing COMPLETED.
+                self._complete_once(
+                    active,
+                    now,
+                    outcome="ABORTED",
+                    code=ErrorCode.SAFETY_STOP_LATCHED.value,
+                    message="motion aborted by software stop",
+                    bus_verified=False,
+                    calibration_invalidated=False,
+                    measured_positions=self.hardware.state(now).positions,
+                )
         return StopResult(
             accepted=True,
             safety=self.safety.current_state(),

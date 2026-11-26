@@ -320,8 +320,9 @@ class RuntimeNode(Node):
         return GoalResponse.ACCEPT
 
     def _cancel(self, goal_handle: Any) -> CancelResponse:
-        with self._lock:
-            self.stack.arbiter.stop("action_cancel", "action goal cancelled")
+        # The arbiter serializes its own transitions; cancel must not wait on
+        # the lock held by an executing goal.
+        self.stack.arbiter.stop("action_cancel", "action goal cancelled")
         return CancelResponse.ACCEPT
 
     def _feedback(self, goal_handle: Any, phase: str, progress: float) -> None:
@@ -339,10 +340,11 @@ class RuntimeNode(Node):
     def _execute(self, goal_handle: Any):
         command = command_to_core(goal_handle.request.command)
         self._feedback(goal_handle, "VALIDATING", 0.0)
-        with self._lock:
-            self._feedback(goal_handle, "EXECUTING", 0.1)
-            result = self.stack.arbiter.execute(command)
-            self._feedback(goal_handle, "VERIFYING", 0.8)
+        # No outer lock: the arbiter is the single writer for the session and
+        # a concurrent cancel must be able to reach stop().
+        self._feedback(goal_handle, "EXECUTING", 0.1)
+        result = self.stack.arbiter.execute(command)
+        self._feedback(goal_handle, "VERIFYING", 0.8)
         if result.outcome == "COMPLETED":
             goal_handle.succeed()
         else:
@@ -354,16 +356,16 @@ class RuntimeNode(Node):
     def _on_safety_stop(self, msg: Bool) -> None:
         if not msg.data:
             return
-        with self._lock:
-            self.stack.arbiter.stop("safety_stop", "external /safety_stop")
-            state = self.stack.safety.current_state()
+        self.stack.arbiter.stop("safety_stop", "external /safety_stop")
+        state = self.stack.safety.current_state()
         self._safety_pub.publish(safety_to_msg(state, self.stack.clock))
 
     def _tick(self) -> None:
-        with self._lock:
-            self.stack.sync_state()
-            self.stack.arbiter.tick()
-            state = self.stack.safety.current_state()
+        # No outer lock: this timer must be able to observe lease loss while
+        # an execute is in flight.
+        self.stack.sync_state()
+        self.stack.arbiter.tick()
+        state = self.stack.safety.current_state()
         self._safety_pub.publish(safety_to_msg(state, self.stack.clock))
 
 
