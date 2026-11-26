@@ -54,8 +54,12 @@ text = "\n".join(path.read_text(encoding="utf-8") for path in paths)
 publishers = set(re.findall(r"create_publisher\s*\(\s*([A-Za-z_][\w.]*)", text, re.S))
 clients = set(re.findall(r"create_client\s*\(\s*([A-Za-z_][\w.]*)", text, re.S))
 topics = set(re.findall(r'create_publisher\s*\(\s*[A-Za-z_][\w.]*\s*,\s*"([^"]+)"', text, re.S))
-assert publishers <= {"SafetyState", "JointState"}, f"unexpected publishers: {publishers}"
-assert topics <= {"/jcheng/telemetry/safety", "/sim/joint_command"}, f"unexpected topics: {topics}"
+assert publishers <= {"SafetyState", "JointState", "RobotState"}, f"unexpected publishers: {publishers}"
+assert topics <= {
+    "/jcheng/telemetry/safety",
+    "/sim/joint_command",
+    "/jcheng/telemetry/state",
+}, f"unexpected topics: {topics}"
 assert not clients, f"M5.1 must not create clients: {clients}"
 assert "ExecuteMotion" in text, "ExecuteMotion action missing"
 # The simulation bridge is test-only: it must stay off by default.
@@ -85,4 +89,4 @@ if [[ "$fail" -ne 0 ]]; then
   echo "M5.1 gate FAILED" >&2
   exit 1
 fi
-echo "M5.1 gate OK: Mock-only runtime (test-only sim bridge), lease/safety/action, no hardware command path"
+echo "M5.1 gate OK: Mock-only runtime (test-only sim bridge, read-only state tap), lease/safety/action, no hardware command path"
