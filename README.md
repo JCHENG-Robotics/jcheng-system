@@ -4,10 +4,12 @@
 
 The privileged runtime and system integration point for JCHENG Robotics.
 
-> Status: **Experimental** — v0.3.0-dev as of 2026-11-25. M4 read-only hardware
-> and M5.2 core motion are verified; M6 offline replay and real MoveIt plan-only
-> are verified. S7 (stale-state injection) and S9 (runtime publisher detection)
-> are not verified on hardware. The runtime is not safety-certified.
+> Status: **Experimental** — v0.3.0-dev as of 2026-11-26. M4 read-only hardware,
+> M5.2 core motion, M6 offline replay/real MoveIt plan-only, the teleop intake and
+> the test-only domain-43 simulation bridge are verified on the mock/simulation.
+> S7 (stale-state injection) and S9 (runtime publisher detection) are not verified
+> on hardware, and no teleop hardware or PiPER X L3 claim is made. The runtime is
+> not safety-certified.
 > English canonical; the Chinese README is a translation.
 
 ## 1. Deliverables

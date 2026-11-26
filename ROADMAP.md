@@ -1,8 +1,9 @@
 # jcheng-system roadmap
 
-> Status: **v0.3.0-dev** as of 2026-11-25. M4 read-only, M5.2 core motion and
-> the M6 S13 replay plus S17 real MoveIt plan-only are verified; S14 base,
-> full G8 and the S7/S9 residuals remain.
+> Status: **v0.3.0-dev** as of 2026-11-26. M4 read-only, M5.2 core motion, M6 S13
+> and S17 real MoveIt, the teleop intake and the test-only simulation bridge are
+> verified on the mock/simulation; S14 base, full G8, teleop hardware and the
+> S7/S9 residuals remain.
 
 ## Current state
 
@@ -50,7 +51,7 @@ must repeat C1–C5 there before any hardware session.
 | M5.1 | Mock ROS services/actions, lease, safety, stop latch | Complete (2026-11-24) | 5 ROS tests; `m5-mock` | `docs/M5-SCOPE.md` |
 | M5.2 | Supervised hardware joint and gripper | Complete, core (2026-11-24) | `COMPLETED` + `bus_verified`; stop latches | `docs/M5-SCOPE.md` |
 | M6 | Replay and MoveIt plan-only | In progress — S13 21/21 and S17 real pass; S14 base and full G8 pending | `docs/M6-SCOPE.md` |
-| M7 | Integrated capability through the system API | Planned | A capability passes L3 and supervised L5 | — |
+| M7 | Integrated capability through the system API | In progress — teleop intake (L2) and test-only ArmPi/Gate-2 simulation bridge (L3) pass on the mock; deployed gateway and hardware pending | A capability passes L3 and supervised L5 | `docs/TELEOP-INTAKE.md`; `e2e/reports/20261126_teleop_sim/`; `e2e/reports/20261126_teleop_sim_gate2/` |
 | M8 | System v1.0 with safety case and lockfile freeze | Planned | All gates green; no open residual | — |
 
 ## Next
