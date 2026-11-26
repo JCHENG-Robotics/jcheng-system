@@ -30,6 +30,9 @@ All notable changes to this project are documented here. Format based on
   (`tests` 45 pass, `tests_ros` 12 pass).
 - `e2e/reports/20261126_teleop_sim_gate2/`: Gate-2 L3 probe, both joints
   moved to about ±0.501 rad; domain 43, test-only.
+- `e2e/reports/20261126_teleop_domain42/`: canonical-domain L3 for Gate-2.
+  Runtime/teleop on domain 42; `RosSimHardwareBridge` in a separate domain-43
+  context; both joints moved to about ±0.125 rad.
 - Optional `gripper`/`workspace`/`table_plane` robot-profile fields and a
   simulation-only Gate-2 profile; `MockStack.build(robot=...)` and the runtime
   `robot` parameter select it. `tests/test_teleop.py` covers a two-joint step.

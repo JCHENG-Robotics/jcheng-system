@@ -70,13 +70,30 @@ class RuntimeNode(Node):
             evidence_path=evidence,
             robot=str(self.get_parameter("robot").value or "armpi_ultra"),
         )
+        self._sim_context = None
+        self._sim_node = None
+        self._sim_executor = None
+        self._sim_thread = None
         if bool(self.get_parameter("sim_bridge").value):
+            import rclpy
+            from rclpy.executors import SingleThreadedExecutor
+            from rclpy.node import Node as RclpyNode
+
             from .sim_bridge import RosSimHardwareBridge
 
-            bridge = RosSimHardwareBridge(self, self.stack.profile, self.stack.clock)
+            self._sim_context = rclpy.Context()
+            rclpy.init(context=self._sim_context, domain_id=43)
+            self._sim_node = RclpyNode("jcheng_sim_bridge", context=self._sim_context)
+            self._sim_executor = SingleThreadedExecutor(context=self._sim_context)
+            self._sim_executor.add_node(self._sim_node)
+            self._sim_thread = threading.Thread(target=self._sim_executor.spin, daemon=True)
+            self._sim_thread.start()
+            bridge = RosSimHardwareBridge(self._sim_node, self.stack.profile, self.stack.clock)
             self.stack.hardware = bridge
             self.stack.arbiter.hardware = bridge
-            self.get_logger().info("teleop simulation bridge enabled (test-only, domain 43)")
+            self.get_logger().info(
+                "teleop simulation bridge enabled: runtime on its domain, bridge on domain 43 (test-only)"
+            )
         self.teleop = TeleopIntake(self.stack)
         self._lock = threading.RLock()
         self._feedback_seq = 0
@@ -407,6 +424,18 @@ class RuntimeNode(Node):
         self.stack.arbiter.stop("safety_stop", "external /safety_stop")
         state = self.stack.safety.current_state()
         self._safety_pub.publish(safety_to_msg(state, self.stack.clock))
+
+    def destroy_node(self) -> bool:
+        if self._sim_executor is not None:
+            self._sim_executor.shutdown()
+        if self._sim_node is not None:
+            self._sim_node.destroy_node()
+        if self._sim_context is not None:
+            import rclpy
+
+            if rclpy.ok(context=self._sim_context):
+                rclpy.shutdown(context=self._sim_context)
+        return super().destroy_node()
 
     def _tick(self) -> None:
         # No outer lock: this timer must be able to observe lease loss while

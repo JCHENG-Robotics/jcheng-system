@@ -80,6 +80,9 @@ bash scripts/check_repo_gate.sh
 2. A teleop-side DDS publisher with an HTTP lease adapter (or the operator
    console's external lease) and a `TeleopState` status surface. The current
    publisher takes an operator-supplied lease id.
+3. The canonical domain-42 runtime + domain-43 bridge split is proven for
+   Gate-2 (see `e2e/reports/20261126_teleop_domain42/`); ArmPi is still the
+   domain-43 harness result.
 3. QoS and timing characterization; the current L3 probe uses domain 43 and
    does not characterize plant tracking/latency as a bound.
 4. A strict mode/purpose distinction in the future `TeleopCommand` v0.2.
