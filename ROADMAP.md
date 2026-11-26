@@ -17,6 +17,7 @@
 | M6 S17 real MoveIt plan-only | Complete (2026-11-25) | `SUCCESS`, 8-point plan, 0 controller servers, no command topics; `docs/M6-SCOPE.md` |
 | ArmPi Ultra runtime image | Complete (2026-11-25) | `armpi-ultra:flatten-20261125`, 7.1 GB; `deploy/armpi-ultra/docs/ACCEPTANCE-20261125.md` |
 | M6 S14 base / full G8 | Not started | — |
+| Teleoperation intake core + ROS subscriber (mock) | Complete, mock only (2026-11-26) | `tests/test_teleop.py`; `tests_ros/test_teleop_runtime.py`; `docs/TELEOP-INTAKE.md` |
 | S7 stale-state injection, S9 runtime publisher | Not verified | — |
 
 ### P0 execution-model blocker — resolved on the mock (2026-11-26)
