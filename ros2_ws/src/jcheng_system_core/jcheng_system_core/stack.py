@@ -35,6 +35,7 @@ class MockStack:
         root: str | Path,
         clock: Clock | ManualClock | None = None,
         evidence_path: str | Path | None = None,
+        hardware: MockHardwareBridge | None = None,
     ) -> "MockStack":
         root = Path(root)
         clock = clock or Clock()
@@ -45,7 +46,7 @@ class MockStack:
         limits = SafetyLimits.from_file(root / "configs" / "robots" / "armpi_ultra" / "safety_overlay.yaml")
         safety = SafetySupervisor(profile, contract.version, clock, limits)
         authority = LeaseManager(contract.version, clock)
-        hardware = MockHardwareBridge(profile, clock)
+        hardware = hardware or MockHardwareBridge(profile, clock)
         guard = PublisherGuard()
         evidence = EvidenceStore(clock, evidence_path)
         arbiter = MotionArbiter(

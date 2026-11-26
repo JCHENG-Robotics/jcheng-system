@@ -40,8 +40,11 @@ mock hardware / future simulation bridge
   limit and bus verification.
 - A ROS 2 transport wrapper exists in `jcheng_runtime`: it subscribes
   `/jcheng/intent/teleop` with best-effort/depth-1 QoS and calls the same
-  intake on the runtime 20 Hz timer. The simulation bridge is not implemented
-  yet.
+  intake on the runtime 20 Hz timer.
+- `jcheng_runtime/sim_bridge.py` provides a **test-only** `RosSimHardwareBridge`:
+  it publishes `/sim/joint_command` and reads `/sim/joint_states` on domain 43.
+  Enable it with the `sim_bridge:=true` runtime parameter. It is not a
+  deployment path and does not join 0/41/42.
 - Deadman release and input timeout are **non-latching** teleop aborts; an
   explicit `TeleopIntake.stop()` calls `MotionArbiter.stop()` and latches.
 - A lease is checked on every sample; no lease is rejected with the canonical
@@ -71,13 +74,13 @@ bash scripts/check_repo_gate.sh
 
 ## 4. Open items for M2
 
-1. A simulation bridge that supplies measured state and accepts multi-joint
-   targets on domain 43; it must remain test-only and must not make the
-   simulation plant a motion authority.
+1. Gate-2 and PiPER X system profiles and a multi-robot simulation run; the
+   current L3 probe is ArmPi only.
 2. A teleop-side DDS publisher with an HTTP lease adapter (or the operator
-   console's external lease) and a `TeleopState` status surface.
-3. QoS and timing characterization; the current tests use `ManualClock` for
-   core tests and the real runtime clock for the ROS wrapper.
+   console's external lease) and a `TeleopState` status surface. The current
+   publisher takes an operator-supplied lease id.
+3. QoS and timing characterization; the current L3 probe uses domain 43 and
+   does not characterize plant tracking/latency as a bound.
 4. A strict mode/purpose distinction in the future `TeleopCommand` v0.2.
 
 ## 5. Related
