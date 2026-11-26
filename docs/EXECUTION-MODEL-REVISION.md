@@ -10,6 +10,9 @@
 > [`e2e/reports/20261126_concurrency_probe/`](../e2e/reports/20261126_concurrency_probe/README.md).
 > Re-run evidence:
 > [`e2e/reports/20261126_concurrency_probe_r2/`](../e2e/reports/20261126_concurrency_probe_r2/README.md).
+> The mock probes are green. R7 is a new offline finding: the deployed
+> `armpi_debug_gateway` guard can lose a stop between `validate` and `start`;
+> the real C1–C5 probe was not run and M4 still requires it after a fix.
 > R8 closed the same C2p ordering window in the chosen M5.2 executor offline;
 > a hardware C1–C5 session is still required. No motion is authorized by this
 > document.
@@ -74,6 +77,15 @@ runtime check is therefore covered by `m5-mock`.
 The deployed `armpi_debug_gateway` is a different implementation and was not
 probed. M3 is unblocked on the mock; M4 requires the same probes on the
 deployed gateway.
+
+R7 (2026-11-26) adds an offline finding against the deployed implementation:
+its `MotionGuard` validates and starts in separate calls, and the stop path can
+run between them, leaving the guard `idle` before `start` makes the command
+`executing` again. The probe shows the command then reaching `completed`.
+Evidence:
+[`e2e/reports/20261126_deployed_guard_race/`](../e2e/reports/20261126_deployed_guard_race/README.md).
+This is not a hardware probe and does not replace C1–C5; it means the motion
+target must be fixed or changed before M4/M5 motion.
 
 ## 2. Proposed model
 
@@ -181,7 +193,38 @@ stop(operator, reason):
 - The action goal aborts with the session's terminal result; the result is not
   produced a second time by the runtime.
 
-### 2.6 Target decision and M5.2 executor ordering (R8)
+### 2.6 Deployed gateway dispatch/stop ordering (R7 finding)
+
+The frozen `jcheng-manipulation` gateway is a separate implementation:
+
+```text
+dispatch_motion:  validate() -> publish() -> start()
+stop_motion:                         publish(hold) -> mark_stopped()
+```
+
+`MotionGuard` locks each method, not the sequence. A stop that arrives between
+`validate()` and `start()` publishes a hold while `_active` is `None`, returns
+`idle`, and is then overwritten by `start()`. The offline probe reproduces
+`idle -> executing -> completed` for that interleaving; the control case
+(stop after start) stays `stopped`.
+
+The guard stop is also **not a latch**: `mark_stopped` clears the active plan
+but does not set `_safety_stop`, and a second `validate` is accepted
+immediately. That is acceptable only if an external supervisor owns the latch;
+if this gateway is the motion authority, it must not be.
+
+Required change before a motion session:
+
+- make dispatch atomic under one guard/session lock (validate, stop-latch
+  check, publish, start), with the stop hold in the same lock; or
+- add a generation token: `validate` prepares a generation, `mark_stopped`
+  increments it, and `start`/publish refuse a stale generation.
+
+Rerun the probe and the hardware C1–C5 after the fix. The frozen baseline is
+not edited by this repository. The chosen target is recorded in §2.7; this
+gateway is not the motion authority.
+
+### 2.7 Target decision and M5.2 executor ordering (R8)
 
 On 2026-11-26 the owner chose the **`jcheng_system_core` gateway with the M5.2
 `jcheng_vendor` hardware executor** as the M4/M5 motion target. The frozen
@@ -204,7 +247,7 @@ A stop before the send now aborts without publishing; a stop after the send
 orders its hold after the command write. The executor still holds no lock
 across the duration wait or the bus read.
 
-### 2.7 Hardware-backed HTTP gateway composition (R9)
+### 2.8 Hardware-backed HTTP gateway composition (R9)
 
 The gateway process previously built only `MockStack`, which uses
 `MotionArbiter`. R9 adds `jcheng_vendor.gateway_stack.VendorStack`:
@@ -263,7 +306,7 @@ without the harness delay (finding F5). Proposed:
 | R4 | ROS runtime cancel path; no lock across execute/tick | Same probes through the runtime adapter | **Done**; `m5-mock` green in CI run 45748815799 |
 | R5 | `StopResult` confirmation fields (contract proposal) | Interfaces review | **Proposal merged** (#8); schema/hash and system implementation pending |
 | R6 | Re-run C1–C5 on the mock and on the deployed gateway model | M3 unblock | **Mock done**; hardware C1–C5 still required |
-| R7 | Deployed `armpi_debug_gateway` dispatch/stop ordering | Offline probe; legacy gateway only | **Finding filed** 2026-11-26; not the chosen target, not fixed |
+| R7 | Deployed `armpi_debug_gateway` dispatch/stop ordering | Offline probe; legacy gateway only | **Finding filed** 2026-11-26: stop lost between `validate` and `start`; not the chosen target, not fixed |
 | R8 | M5.2 `HardwareExecutor` send/stop ordering | C2p offline: no send after an accepted stop | **Done** (offline, 2026-11-26): send and stop share `_active_lock`; `tests/test_vendor_executor_c2p.py`; `e2e/reports/20261126_vendor_executor_c2p/` |
 | R9 | Hardware-backed HTTP gateway composition | `/v1/execute` reaches `HardwareExecutor`; health advertises `hardware` | **Composition done offline** 2026-11-26 (`VendorStack` + fake bridge); ROS node/launch and hardware C1–C5 pending |
 
@@ -285,8 +328,10 @@ must remain green.
 
 1. **Resolved 2026-11-26:** the M4/M5 target is this `jcheng_system_core`
    gateway with the M5.2 `jcheng_vendor` hardware executor. The deployed
-   `armpi_debug_gateway` is legacy; R7 is its known risk and it is not the
-   motion authority.
+   `armpi_debug_gateway` is legacy; R7 is its known risk (a stop can be lost
+   between `validate` and `start`; evidence:
+   `e2e/reports/20261126_deployed_guard_race/`) and it is not the motion
+   authority.
 2. Should a replay of an in-flight idempotency key wait or fail fast? The
    contract must say.
 3. Is a gateway tick thread acceptable alongside the ROS executor's own tick,
