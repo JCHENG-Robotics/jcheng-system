@@ -129,6 +129,12 @@ Mock 网关端点：`/v1/health`、`/v1/contract`、`/v1/state`、`/v1/safety`�
 `/v1/battery`、`/v1/topics`、`/v1/cameras`、`/v1/tf`、`/v1/events`。
 所有非 GET 方法返回 403；没有 motion/lease/arm/reset 路由。
 
+两个网关还提供只读 WebSocket 流 `/v1/ws/state`（需要 Bearer token）。升级后
+服务端先发一个 `hello` 信封，然后以约 10 Hz 发送 `state` 与 `safety` 信封，
+格式遵循 `jcheng-interfaces/schemas/ws/jcheng-ws.v1.json`。客户端 ping 会收到
+pong；客户端 close 结束流；其他客户端数据被忽略。该流没有租约、运动、事件或
+写入路径。
+
 ## 5. 安全边界
 
 - 默认 `DISARMED`；使能需要操作员、检查清单与确认短语。

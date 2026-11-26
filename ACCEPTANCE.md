@@ -26,6 +26,7 @@
 |---|---|---|---|
 | M3 scenario runner (S1–S17) | L3 | pass — 15 passed, 2 skipped, 0 required failures | `e2e/reports/m3-mock.json` |
 | M3 pytest | L1 | pass — 16 tests | CI `m3-mock` |
+| Gateway WebSocket `/v1/ws/state` | L2 | pass — 6 tests (mock + read-only gateways, auth, upgrade, ping) | `tests/test_gateway_ws.py` |
 | M4 offline pytest | L1 | pass — 28 tests (27 pass, 1 conditional skip) | CI `m4-readonly` |
 | M4 read-only probe | L2 | pass — `writes=0`, measured samples > 0 | `e2e/reports/m4-readonly.json` |
 | M4 hardware read-only | L5 | pass — 30 min, 1799/1799 `measured`, `writes=0` | `jcheng-manipulation/docs/ecosystem/evidence/m4-readonly-20261123/` |
@@ -46,6 +47,17 @@
   remote tag.
 - No non-`jcheng_hardware` publisher; stop, stale state, limits, workspace,
   table, guard and bus failures reject or latch.
+
+### Gateway WebSocket `/v1/ws/state` (2026-11-26)
+
+- Both the mock and read-only gateways upgrade `GET /v1/ws/state` to RFC 6455
+  with Bearer authentication.
+- The server sends one `hello` envelope and then `state`/`safety` envelopes at
+  about 10 Hz using `jcheng-ws.v1.json`; client ping returns pong and client
+  close ends the stream.
+- Six tests cover the mock and read-only streams, missing-token rejection,
+  non-upgrade rejection and ping/pong; no hardware and no new dependency.
+- The stream has no lease, motion, event or write path.
 
 ### M4 — read-only, offline (2026-11-23)
 

@@ -52,6 +52,21 @@ gateway/testkit 入口和 bringup launch。**M3 不实现 ROS service/action 传
 仍是 `jcheng_system_core`。M5.1 不导入厂商命令消息、不发布 `/servo_controller`、
 不打开设备。M5.2 才把 Mock 硬件替换为 `/servo_controller` 硬件桥。
 
+## 1.3 只读 WebSocket 状态流
+
+```text
+GET /v1/ws/state (Authorization: Bearer)
+  → RFC 6455 upgrade（jcheng_system_core/ws.py）
+  → hello
+  → state + safety  (~10 Hz, jcheng-ws.v1.json envelopes)
+```
+
+Mock 网关和只读网关共用同一个升级实现；只读网关发送 telemetry cache 的
+`RobotState` 与裸 `SafetyState`（HTTP `/v1/safety` 的
+`authoritative=false` 包装不进入 WS）。服务端只发送文本帧，客户端 ping 得到
+pong，close 结束流，其他客户端数据忽略。没有租约、运动、事件或写入路径。
+两个 HTTP handler 使用 HTTP/1.1（WebSocket 握手要求）。
+
 ## 2. 包职责
 
 | 包 | M3 职责 | M4 状态 |
