@@ -8,12 +8,26 @@ All notable changes to this project are documented here. Format based on
 
 ### Added
 
+- R9: `jcheng_vendor.gateway_stack.VendorStack` composes the M5.2
+  `HardwareExecutor` with the HTTP `GatewayApp`; `VendorGatewayHardware`
+  adapts the read surface, and `mode="hardware"` / `capabilities=("hardware",)`
+  replace the hard-coded mock advertisement. `MockStack` keeps the mock mode.
+  Offline `tests/test_vendor_gateway_stack.py` drives `/v1/motion/execute` to a
+  bus-verified `COMPLETED`. The ROS process that owns `VendorBridge` and polls
+  the bus is still required.
+- R8: `jcheng_vendor.executor.HardwareExecutor` now orders the bridge send and
+  the stop under the same `_active_lock`. A stop accepted before the send
+  publishes no command; a stop after the send orders its hold after the write.
+  `tests/test_vendor_executor_c2p.py` covers both interleavings and a normal
+  bus-verified completion. Evidence:
+  `e2e/reports/20261126_vendor_executor_c2p/`.
 - R7 offline finding against the deployed `armpi_debug_gateway`:
   `tools/deployed_guard_race_probe.py` reproduces a lost stop between
   `MotionGuard.validate()` and `start()`; the command can then complete. No
   ROS or hardware is used. Evidence:
   `e2e/reports/20261126_deployed_guard_race/`. The frozen baseline is not
-  edited; the motion target must be fixed or changed before M4/M5.
+  edited; the chosen target is the M5.2 executor (R8/R9), so this remains a
+  legacy-gateway risk.
 - `jcheng_system_core.teleop.TeleopIntake`: mock/system-side teleoperation
   intake. It validates contract, lease, sequence, deadman, stamp and mode,
   holds the latest setpoint, and converts it at a bounded period into a
@@ -107,6 +121,9 @@ All notable changes to this project are documented here. Format based on
 
 ### Changed
 
+- M4/M5 motion target (2026-11-26): the `jcheng_system_core` gateway with the
+  M5.2 `jcheng_vendor` hardware executor. The frozen `armpi_debug_gateway` is
+  legacy and not the motion authority; its R7 race is recorded but not fixed.
 - R5 is merged as a contract proposal in `jcheng-interfaces` (#8):
   `StopResponse` would add `confirmation` (request accepted / backend
   confirmed) and `physical_stop: unverified`. No schema, tag or contract hash

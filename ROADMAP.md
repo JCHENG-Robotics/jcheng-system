@@ -44,9 +44,22 @@ there before any motion session.
 
 R7 (2026-11-26) is an offline finding against that deployed gateway: a stop
 that arrives between `MotionGuard.validate()` and `start()` is lost, and the
-command can then complete. The frozen baseline is not edited; the M4/M5 motion
-target must be fixed or changed first. Evidence:
+command can then complete. The frozen baseline is not edited; its guard stop
+is also not a latch. Evidence:
 [`e2e/reports/20261126_deployed_guard_race/`](e2e/reports/20261126_deployed_guard_race/README.md).
+
+**Target decision (2026-11-26):** the M4/M5 motion target is the
+`jcheng_system_core` gateway with the M5.2 `jcheng_vendor` hardware executor,
+not the frozen `armpi_debug_gateway`. R8 fixed the executor's C2p send/stop
+window offline: send and stop share `_active_lock`, so a stop before the send
+publishes no command. Evidence:
+[`e2e/reports/20261126_vendor_executor_c2p/`](e2e/reports/20261126_vendor_executor_c2p/README.md).
+The deployed legacy gateway's R7 race remains a documented risk but is not on
+the chosen path. R9 composes the M5.2 executor behind the HTTP `GatewayApp`
+(`VendorStack`, `mode="hardware"`) and proves `/v1/motion/execute` offline. A
+ROS process owning `VendorBridge`/bus polling and a hardware C1–C5 session
+remain; if the deployed gateway is ever used, it needs the atomic dispatch fix
+and C1–C5 as well.
 
 ## Milestones
 

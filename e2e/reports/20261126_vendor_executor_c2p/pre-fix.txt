@@ -1,0 +1,16 @@
+Pre-fix observation (2026-11-26, before R8)
+============================================
+
+The test `test_stop_before_send_does_not_publish` failed with:
+
+    AssertionError: ['snapshot', 'hold', 'send_step', 'hold']
+    assert 'send_step' not in ['snapshot', 'hold', 'send_step', 'hold']
+
+Interpretation: the execute thread was paused inside
+`HardwareExecutor.execute` after `_active` was set and before `send_step`.
+`stop()` set the stop event, latched safety and published the hold. The
+execute thread then continued and called `send_step` **after** the hold, and
+the loop published a second hold before returning `ABORTED`.
+
+After R8 the same interleaving records `['snapshot', 'hold', 'hold']` and no
+`send_step`; the command is not published after the accepted stop.
