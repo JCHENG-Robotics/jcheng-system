@@ -1,0 +1,47 @@
+{
+  "cases": {
+    "control": {
+      "state_after_observe": "completed",
+      "state_after_start": "executing",
+      "state_after_stop": null,
+      "steps": [
+        "validate",
+        "start",
+        "observe_target"
+      ],
+      "stop_between_validate_and_start": false,
+      "stop_lost": false
+    },
+    "race": {
+      "state_after_observe": "completed",
+      "state_after_start": "executing",
+      "state_after_stop": "idle",
+      "steps": [
+        "validate",
+        "mark_stopped",
+        "start",
+        "observe_target"
+      ],
+      "stop_between_validate_and_start": true,
+      "stop_lost": true
+    }
+  },
+  "code_order": {
+    "dispatch": "node.dispatch_motion: validate -> publish -> start",
+    "guard": "MotionGuard locks each method, not the sequence",
+    "stop": "node.stop_motion: publish(hold) -> mark_stopped"
+  },
+  "config": "synthetic test mapping; not a calibration",
+  "finding": "STOP_LOST_BETWEEN_VALIDATE_AND_START",
+  "generated_at": "2026-11-26T13:30:06.250016+00:00",
+  "hardware": "none",
+  "limitations": [
+    "Offline motion-guard reproduction; not the deployed HTTP process.",
+    "No ROS, no publisher, no measured subscription and no hardware.",
+    "A hardware C1-C5 run is still required after a fix."
+  ],
+  "probe": "deployed_motion_guard_race",
+  "ros_imported": false,
+  "severity": "P0 for M4 if the deployed gateway is the motion target",
+  "source": "jcheng-manipulation/armpi-debug-studio/ros2_gateway/armpi_debug_gateway/motion.py"
+}

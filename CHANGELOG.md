@@ -8,6 +8,12 @@ All notable changes to this project are documented here. Format based on
 
 ### Added
 
+- R7 offline finding against the deployed `armpi_debug_gateway`:
+  `tools/deployed_guard_race_probe.py` reproduces a lost stop between
+  `MotionGuard.validate()` and `start()`; the command can then complete. No
+  ROS or hardware is used. Evidence:
+  `e2e/reports/20261126_deployed_guard_race/`. The frozen baseline is not
+  edited; the motion target must be fixed or changed before M4/M5.
 - `jcheng_system_core.teleop.TeleopIntake`: mock/system-side teleoperation
   intake. It validates contract, lease, sequence, deadman, stamp and mode,
   holds the latest setpoint, and converts it at a bounded period into a
@@ -101,10 +107,10 @@ All notable changes to this project are documented here. Format based on
 
 ### Changed
 
-- R5 is filed as a contract proposal in
-  `jcheng-interfaces/docs/proposals/stop-confirmation-levels.md`:
+- R5 is merged as a contract proposal in `jcheng-interfaces` (#8):
   `StopResponse` would add `confirmation` (request accepted / backend
-  confirmed) and `physical_stop: unverified`. No schema or hash change yet.
+  confirmed) and `physical_stop: unverified`. No schema, tag or contract hash
+  change yet.
 - `MotionArbiter` now has a single terminal writer and a session lock:
   `_complete_once` is the only place a result and its idempotency entry are
   written; `stop()` completes `ABORTED` but keeps the session active until the

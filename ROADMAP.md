@@ -36,10 +36,17 @@ Original failure:
 passed `m1-gate`, `m3-mock`, `m4-readonly`, `m5-mock`, `m5-vendor` and
 `m6-replay` on the merged commit.
 
-R5 (`StopResult` confirmation levels) is filed as
-`jcheng-interfaces/docs/proposals/stop-confirmation-levels.md`; the schema
-review is pending. The deployed `armpi_debug_gateway` was not probed, and M4
-must repeat C1–C5 there before any hardware session.
+R5 (`StopResult` confirmation levels) is merged as a proposal in
+`jcheng-interfaces` (#8); the schema, tag and contract hash are unchanged, so
+the system gateway does not emit the fields yet. The deployed
+`armpi_debug_gateway` was not probed on hardware, and M4 must repeat C1–C5
+there before any motion session.
+
+R7 (2026-11-26) is an offline finding against that deployed gateway: a stop
+that arrives between `MotionGuard.validate()` and `start()` is lost, and the
+command can then complete. The frozen baseline is not edited; the M4/M5 motion
+target must be fixed or changed first. Evidence:
+[`e2e/reports/20261126_deployed_guard_race/`](e2e/reports/20261126_deployed_guard_race/README.md).
 
 ## Milestones
 
