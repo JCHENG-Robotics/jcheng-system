@@ -8,6 +8,12 @@ All notable changes to this project are documented here. Format based on
 
 ### Added
 
+- Read-only WebSocket stream at `GET /v1/ws/state` on both the mock and
+  read-only gateways. The stdlib HTTP handlers upgrade to RFC 6455 with Bearer
+  authentication and send one `hello` then `state`/`safety` envelopes at about
+  10 Hz (`jcheng-ws.v1.json`). Ping/pong and close are handled; there is no
+  lease, motion, event or write path. No new runtime dependency; six tests
+  cover both gateways, auth, upgrade rejection and ping.
 - `scripts/humble_ci.sh`: local Humble build/test wrapper (m3, m4, m5-mock,
   m5-vendor, m6) in the `armpi-humble-moveit` image, with a disposable
   workspace copy. CI remains the artifact authority.
