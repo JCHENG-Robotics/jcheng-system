@@ -35,17 +35,21 @@ class MockStack:
         root: str | Path,
         clock: Clock | ManualClock | None = None,
         evidence_path: str | Path | None = None,
+        hardware: MockHardwareBridge | None = None,
+        robot: str = "armpi_ultra",
     ) -> "MockStack":
         root = Path(root)
         clock = clock or Clock()
-        profile = RobotProfile.from_file(root / "configs" / "robots" / "armpi_ultra" / "profile.yaml")
+        profile_dir = root / "configs" / "robots" / robot
+        profile = RobotProfile.from_file(profile_dir / "profile.yaml")
         contract = load_contract(root / "configs" / "contract.yaml")
         if not isinstance(clock, (Clock, ManualClock)):
             raise TypeError("clock must be Clock or ManualClock")
-        limits = SafetyLimits.from_file(root / "configs" / "robots" / "armpi_ultra" / "safety_overlay.yaml")
+        overlay = profile_dir / "safety_overlay.yaml"
+        limits = SafetyLimits.from_file(overlay) if overlay.is_file() else SafetyLimits()
         safety = SafetySupervisor(profile, contract.version, clock, limits)
         authority = LeaseManager(contract.version, clock)
-        hardware = MockHardwareBridge(profile, clock)
+        hardware = hardware or MockHardwareBridge(profile, clock)
         guard = PublisherGuard()
         evidence = EvidenceStore(clock, evidence_path)
         arbiter = MotionArbiter(

@@ -39,9 +39,9 @@ class RobotProfile:
     raw: dict[str, Any]
     joints: dict[str, JointLimit]
     joint_order: list[str]
-    gripper: dict[str, Any]
-    workspace: dict[str, Any]
-    table_plane: dict[str, Any]
+    gripper: dict[str, Any] | None
+    workspace: dict[str, Any] | None
+    table_plane: dict[str, Any] | None
     profiles: dict[str, Any]
     source_hashes: dict[str, str]
     profile_hash: str
@@ -74,9 +74,9 @@ class RobotProfile:
         for joint in joints.values():
             if joint.lower_rad >= joint.upper_rad:
                 raise ValueError(f"{joint.name}: lower >= upper")
-        workspace = raw["workspace"]
-        table_plane = raw["table_plane"]
-        if not table_plane["normal"][2] > 0:
+        workspace = raw.get("workspace")
+        table_plane = raw.get("table_plane")
+        if table_plane is not None and not table_plane["normal"][2] > 0:
             raise ValueError("table plane normal must point up")
         safety_subset = {
             "joints": raw["joints"],
@@ -89,7 +89,7 @@ class RobotProfile:
             raw=raw,
             joints=joints,
             joint_order=joint_order,
-            gripper=raw["gripper"],
+            gripper=raw.get("gripper"),
             workspace=workspace,
             table_plane=table_plane,
             profiles=raw.get("profiles", {}),
@@ -115,10 +115,14 @@ class RobotProfile:
 
     @property
     def gripper_open_rad(self) -> float:
+        if self.gripper is None:
+            raise ValueError("robot profile has no gripper")
         return float(self.gripper["open_rad"])
 
     @property
     def gripper_closed_rad(self) -> float:
+        if self.gripper is None:
+            raise ValueError("robot profile has no gripper")
         return float(self.gripper["closed_rad"])
 
 

@@ -19,7 +19,22 @@ All notable changes to this project are documented here. Format based on
 - `jcheng_runtime` teleop subscriber: `/jcheng/intent/teleop` (best-effort,
   depth 1) converts `TeleopCommand` to `TeleopSample`; the 20 Hz runtime timer
   drives the intake. `tests_ros/test_teleop_runtime.py` adds three ROS tests.
+- `jcheng_runtime/sim_bridge.py`: test-only `RosSimHardwareBridge` from the
+  system mock hardware port to `/sim/joint_command`/`/sim/joint_states` on
+  domain 43. `sim_bridge:=true` enables it; no hardware path.
+- `tools/teleop_sim_probe.py` and `e2e/reports/20261126_teleop_sim/`: ArmPi
+  L3 probe (teleop -> intake -> simulation bridge), arm joint1 0 -> 0.205 rad;
+  domain 43, test-only.
 - `docs/TELEOP-INTAKE.md`: M2 scope, limits and open items.
+- `e2e/reports/20261126_teleop_humble/`: Humble container build and tests
+  (`tests` 45 pass, `tests_ros` 12 pass).
+- `e2e/reports/20261126_teleop_sim_gate2/`: Gate-2 L3 probe, both joints
+  moved to about ±0.501 rad; domain 43, test-only.
+- Optional `gripper`/`workspace`/`table_plane` robot-profile fields and a
+  simulation-only Gate-2 profile; `MockStack.build(robot=...)` and the runtime
+  `robot` parameter select it. `tests/test_teleop.py` covers a two-joint step.
+  The Gate-2 L3 probe now moves both joints to about ±0.501 rad; PiPER X remains
+  blocked by the v1 profile schema.
 
 - `tools/concurrency_probe.py`: P0 probes C1–C5 plus a stop/execute stress
   loop against the real mock gateway application and `MockStack`, with a

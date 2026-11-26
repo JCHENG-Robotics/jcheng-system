@@ -53,10 +53,17 @@ paths = sorted((root / "ros2_ws/src/jcheng_runtime/jcheng_runtime").glob("*.py")
 text = "\n".join(path.read_text(encoding="utf-8") for path in paths)
 publishers = set(re.findall(r"create_publisher\s*\(\s*([A-Za-z_][\w.]*)", text, re.S))
 clients = set(re.findall(r"create_client\s*\(\s*([A-Za-z_][\w.]*)", text, re.S))
-assert publishers <= {"SafetyState"}, f"unexpected publishers: {publishers}"
+topics = set(re.findall(r'create_publisher\s*\(\s*[A-Za-z_][\w.]*\s*,\s*"([^"]+)"', text, re.S))
+assert publishers <= {"SafetyState", "JointState"}, f"unexpected publishers: {publishers}"
+assert topics <= {"/jcheng/telemetry/safety", "/sim/joint_command"}, f"unexpected topics: {topics}"
 assert not clients, f"M5.1 must not create clients: {clients}"
 assert "ExecuteMotion" in text, "ExecuteMotion action missing"
-print(f"M5.1 publisher/client gate OK: publishers={sorted(publishers)} clients=[]")
+# The simulation bridge is test-only: it must stay off by default.
+assert 'declare_parameter("sim_bridge", False)' in text, "sim bridge must default to off"
+print(
+    "M5.1 publisher/client gate OK: "
+    f"publishers={sorted(publishers)} topics={sorted(topics)} clients=[]"
+)
 PY
 
 if grep -RInE \
@@ -78,4 +85,4 @@ if [[ "$fail" -ne 0 ]]; then
   echo "M5.1 gate FAILED" >&2
   exit 1
 fi
-echo "M5.1 gate OK: Mock-only runtime, lease/safety/action, no hardware command path"
+echo "M5.1 gate OK: Mock-only runtime (test-only sim bridge), lease/safety/action, no hardware command path"
