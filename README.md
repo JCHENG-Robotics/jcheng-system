@@ -1,12 +1,14 @@
 # jcheng-system
 
+**English** | [简体中文](README.zh-CN.md)
+
 The privileged runtime and system integration point for JCHENG Robotics.
 
 > Status: **Experimental** — v0.3.0-dev as of 2026-11-25. M4 read-only hardware
 > and M5.2 core motion are verified; M6 offline replay and real MoveIt plan-only
 > are verified. S7 (stale-state injection) and S9 (runtime publisher detection)
 > are not verified on hardware. The runtime is not safety-certified.
-> English canonical; see [README.zh-CN.md](README.zh-CN.md) for the Chinese translation.
+> English canonical; the Chinese README is a translation.
 
 ## 1. Deliverables
 
