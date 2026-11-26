@@ -29,7 +29,10 @@ stop/execute stress loop with zero double terminals. Evidence:
 [`e2e/reports/20261126_concurrency_probe_r2/`](e2e/reports/20261126_concurrency_probe_r2/README.md).
 Original failure:
 [`e2e/reports/20261126_concurrency_probe/`](e2e/reports/20261126_concurrency_probe/README.md).
-`jcheng-applications` M3 is **unblocked** on the mock.
+`jcheng-applications` M3 is **unblocked** on the mock. CI run
+[45748815799](https://github.com/JCHENG-Robotics/jcheng-system/actions/runs/45748815799)
+passed `m1-gate`, `m3-mock`, `m4-readonly`, `m5-mock`, `m5-vendor` and
+`m6-replay` on the merged commit.
 
 Still open: R5 (`StopResult` confirmation levels) needs a `jcheng-interfaces`
 review; the deployed `armpi_debug_gateway` was not probed, and M4 must repeat

@@ -63,6 +63,10 @@ rare interleaving.
 | C5b lease expiry during execute | PASS: `ABORTED/LEASE_EXPIRED` |
 | C2 stress, 30 iterations | PASS: 0 double terminals, 0 completed-after-stop, 0 HTTP 500 |
 
+CI run 45748815799 on the merged commit `2ffde33` passed `m1-gate`,
+`m3-mock`, `m4-readonly`, `m5-mock`, `m5-vendor` and `m6-replay`; R4's ROS
+runtime check is therefore covered by `m5-mock`.
+
 The deployed `armpi_debug_gateway` is a different implementation and was not
 probed. M3 is unblocked on the mock; M4 requires the same probes on the
 deployed gateway.
@@ -209,7 +213,7 @@ without the harness delay (finding F5). Proposed:
 | R1 | Session state machine, one lock, `_complete_once`, locked idempotency | C2 single-shot PASS; C2-stress 0/30 double | **Done** (mock, 2026-11-26) |
 | R2 | Stop path with `STOPPING` and `MOTION_BUSY` until the worker exits | C2-stress 0 completed-after-stop, 0 500 | **Done** (mock, 2026-11-26) |
 | R3 | Tick thread and lease checks before completion | C5, C5b PASS | **Done** (mock, 2026-11-26) |
-| R4 | ROS runtime cancel path; no lock across execute/tick | Same probes through the runtime adapter | **Code done**; `tests_ros` CI `m5-mock` pending |
+| R4 | ROS runtime cancel path; no lock across execute/tick | Same probes through the runtime adapter | **Done**; `m5-mock` green in CI run 45748815799 |
 | R5 | `StopResult` confirmation fields (contract proposal) | Interfaces review | **Open**; not implemented |
 | R6 | Re-run C1–C5 on the mock and on the deployed gateway model | M3 unblock | **Mock done**; deployed gateway pending for M4 |
 
