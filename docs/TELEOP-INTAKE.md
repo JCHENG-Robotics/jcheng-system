@@ -75,8 +75,9 @@ bash scripts/check_repo_gate.sh
 ## 4. Open items for M2
 
 1. Gate-2 L3 simulation is proven (`robot:=gate2_arm`, both joints moved to
-   about ±0.501 rad). PiPER X is still blocked by the v1 profile schema; a
-   PiPER X L3 run is not proven.
+   about ±0.501 rad). A simulation-only PiPER X system profile and a 6-joint
+   core test exist, but v1 cannot express a CAN arm canonically and a PiPER X
+   L3 run is not proven.
 2. A teleop-side DDS publisher with an HTTP lease adapter (or the operator
    console's external lease) and a `TeleopState` status surface. The current
    publisher takes an operator-supplied lease id.

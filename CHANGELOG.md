@@ -33,11 +33,11 @@ All notable changes to this project are documented here. Format based on
 - `e2e/reports/20261126_teleop_domain42/`: canonical-domain L3 for Gate-2.
   Runtime/teleop on domain 42; `RosSimHardwareBridge` in a separate domain-43
   context; both joints moved to about ±0.125 rad.
-- Optional `gripper`/`workspace`/`table_plane` robot-profile fields and a
-  simulation-only Gate-2 profile; `MockStack.build(robot=...)` and the runtime
-  `robot` parameter select it. `tests/test_teleop.py` covers a two-joint step.
-  The Gate-2 L3 probe now moves both joints to about ±0.501 rad; PiPER X remains
-  blocked by the v1 profile schema.
+- Optional `servo_id`/`gripper`/`workspace`/`table_plane` profile fields and
+  simulation-only Gate-2 and PiPER X profiles; `MockStack.build(robot=...)` and
+  the runtime `robot` parameter select them. `tests/test_teleop.py` covers
+  two-joint and six-joint steps. Gate-2 L3 moves both joints to about ±0.501 rad;
+  PiPER X L3 is still not proven and v1 is not canonical for a CAN arm.
 
 - `tools/concurrency_probe.py`: P0 probes C1–C5 plus a stop/execute stress
   loop against the real mock gateway application and `MockStack`, with a
