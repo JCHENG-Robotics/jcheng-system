@@ -38,6 +38,14 @@ All notable changes to this project are documented here. Format based on
   the runtime `robot` parameter select them. `tests/test_teleop.py` covers
   two-joint and six-joint steps. Gate-2 L3 moves both joints to about ±0.501 rad;
   PiPER X L3 is still not proven and v1 is not canonical for a CAN arm.
+- Read-only `/jcheng/telemetry/state` tap in `jcheng_runtime`: a `RobotState`
+  at the 20 Hz tick, published next to the safety topic for capability
+  consumers. The mock backend is relabelled `commanded`/`timed` because its
+  fixture claims `measured`/`bus` to exercise the safety path; the simulation
+  bridge keeps `measured`/`simulated`. `tests_ros/test_teleop_runtime.py` adds
+  label and field tests. Test-only; not the production telemetry node.
+- `e2e/reports/20261126_teleop_state_telemetry/`: label matrix, tests and the
+  teleop capture consumer evidence.
 
 - `tools/concurrency_probe.py`: P0 probes C1–C5 plus a stop/execute stress
   loop against the real mock gateway application and `MockStack`, with a
