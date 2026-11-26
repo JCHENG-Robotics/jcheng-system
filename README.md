@@ -150,6 +150,13 @@ Read-only gateway endpoints: `/v1/health`, `/v1/contract`, `/v1/state`,
 `/v1/events`. Every non-GET method returns 403; there are no motion, lease,
 arm or reset routes.
 
+Both gateways also expose a read-only WebSocket stream at `/v1/ws/state`
+(Bearer token required). After the upgrade the server sends one `hello`
+envelope, then `state` and `safety` envelopes at about 10 Hz using
+`jcheng-interfaces/schemas/ws/jcheng-ws.v1.json`. Client ping is answered with
+pong; client close ends the stream; other client data is ignored. The stream
+has no lease, motion, event or write path.
+
 ## 5. Safety boundary
 
 - Default `DISARMED`; arming requires an operator, checklist and confirmation

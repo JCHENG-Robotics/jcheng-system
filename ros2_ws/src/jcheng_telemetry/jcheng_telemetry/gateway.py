@@ -17,6 +17,11 @@ from urllib.parse import parse_qs, urlparse
 import uuid
 
 from jcheng_system_core.errors import ErrorCode
+from jcheng_system_core.ws import (
+    WS_STATE_PATH,
+    WebSocketConnection,
+    serve_state_stream,
+)
 
 from .core import TelemetryCache, safety_state_dict
 from .evidence import ReadOnlyEvidence
@@ -80,6 +85,26 @@ class ReadOnlyGatewayApp:
             "authoritative": False,
             "safety": safety_state_dict(view, self.cache.clock),
         }
+
+    # ---- read-only WebSocket stream ----
+
+    def ws_hello(self) -> dict[str, Any]:
+        return {
+            "contract": self.contract,
+            "profile_hash": self.profile_hash,
+            "config_hash": self.config_hash,
+            "system_version": self.system_version,
+            "mode": "readonly",
+            "read_only": True,
+        }
+
+    def ws_state(self) -> dict[str, Any]:
+        return self.cache.snapshot().to_dict(self.cache.clock)
+
+    def ws_safety(self) -> dict[str, Any]:
+        return safety_state_dict(
+            self.cache.safety_view(self.config_hash), self.cache.clock
+        )
 
     def handle(
         self,
@@ -168,8 +193,12 @@ class ReadOnlyGatewayApp:
 
 class _Handler(BaseHTTPRequestHandler):
     server_version = "JCHENG-ReadOnly-Gateway/0.2"
+    protocol_version = "HTTP/1.1"
 
     def _handle(self) -> None:
+        if self.command == "GET" and urlparse(self.path).path == WS_STATE_PATH:
+            self._handle_ws()
+            return
         length = int(self.headers.get("Content-Length", "0") or 0)
         if length > 256 * 1024:
             self._send(413, {"error": {"code": "INVALID_COMMAND", "message": "body too large"}})
@@ -178,6 +207,17 @@ class _Handler(BaseHTTPRequestHandler):
         headers = {key.lower(): value for key, value in self.headers.items()}
         status, payload = self.server.app.handle(self.command, self.path, headers, body)  # type: ignore[attr-defined]
         self._send(status, payload)
+
+    def _handle_ws(self) -> None:
+        app = self.server.app  # type: ignore[attr-defined]
+        headers = {key.lower(): value for key, value in self.headers.items()}
+        if not app._auth(headers):
+            self._send(401, app._error("UNAUTHORIZED", "missing or invalid token"))
+            return
+        connection = WebSocketConnection.accept(self)
+        if connection is None:
+            return
+        serve_state_stream(connection, app)
 
     def _send(self, status: int, payload: dict[str, Any]) -> None:
         encoded = json.dumps(payload, ensure_ascii=False).encode("utf-8")
