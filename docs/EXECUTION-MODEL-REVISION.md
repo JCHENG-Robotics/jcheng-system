@@ -8,8 +8,10 @@
 > [`e2e/reports/20261126_concurrency_probe/`](../e2e/reports/20261126_concurrency_probe/README.md).
 > Re-run evidence:
 > [`e2e/reports/20261126_concurrency_probe_r2/`](../e2e/reports/20261126_concurrency_probe_r2/README.md).
-> The mock probes are green; the deployed gateway was not probed and M4 still
-> requires C2–C5 there. No motion is authorized by this document.
+> The mock probes are green. R7 is a new offline finding: the deployed
+> `armpi_debug_gateway` guard can lose a stop between `validate` and `start`;
+> the real C1–C5 probe was not run and M4 still requires it after a fix. No
+> motion is authorized by this document.
 
 ## 1. Problem
 
@@ -71,6 +73,15 @@ runtime check is therefore covered by `m5-mock`.
 The deployed `armpi_debug_gateway` is a different implementation and was not
 probed. M3 is unblocked on the mock; M4 requires the same probes on the
 deployed gateway.
+
+R7 (2026-11-26) adds an offline finding against the deployed implementation:
+its `MotionGuard` validates and starts in separate calls, and the stop path can
+run between them, leaving the guard `idle` before `start` makes the command
+`executing` again. The probe shows the command then reaching `completed`.
+Evidence:
+[`e2e/reports/20261126_deployed_guard_race/`](../e2e/reports/20261126_deployed_guard_race/README.md).
+This is not a hardware probe and does not replace C1–C5; it means the motion
+target must be fixed or changed before M4/M5 motion.
 
 ## 2. Proposed model
 
@@ -178,6 +189,37 @@ stop(operator, reason):
 - The action goal aborts with the session's terminal result; the result is not
   produced a second time by the runtime.
 
+### 2.6 Deployed gateway dispatch/stop ordering (R7 finding)
+
+The frozen `jcheng-manipulation` gateway is a separate implementation:
+
+```text
+dispatch_motion:  validate() -> publish() -> start()
+stop_motion:                         publish(hold) -> mark_stopped()
+```
+
+`MotionGuard` locks each method, not the sequence. A stop that arrives between
+`validate()` and `start()` publishes a hold while `_active` is `None`, returns
+`idle`, and is then overwritten by `start()`. The offline probe reproduces
+`idle -> executing -> completed` for that interleaving; the control case
+(stop after start) stays `stopped`.
+
+The guard stop is also **not a latch**: `mark_stopped` clears the active plan
+but does not set `_safety_stop`, and a second `validate` is accepted
+immediately. That is acceptable only if an external supervisor owns the latch;
+if this gateway is the motion authority, it must not be.
+
+Required change before a motion session:
+
+- make dispatch atomic under one guard/session lock (validate, stop-latch
+  check, publish, start), with the stop hold in the same lock; or
+- add a generation token: `validate` prepares a generation, `mark_stopped`
+  increments it, and `start`/publish refuse a stale generation.
+
+Rerun the probe and the hardware C1–C5 after the fix. The frozen baseline is
+not edited by this repository; the target must be chosen or a deployment patch
+authorized.
+
 ## 3. Stop confirmation levels
 
 The revision separates three levels that are currently collapsed into
@@ -217,6 +259,7 @@ without the harness delay (finding F5). Proposed:
 | R4 | ROS runtime cancel path; no lock across execute/tick | Same probes through the runtime adapter | **Done**; `m5-mock` green in CI run 45748815799 |
 | R5 | `StopResult` confirmation fields (contract proposal) | Interfaces review | **Proposal filed** 2026-11-26; schema review pending; not implemented |
 | R6 | Re-run C1–C5 on the mock and on the deployed gateway model | M3 unblock | **Mock done**; deployed gateway pending for M4 |
+| R7 | Deployed gateway dispatch/stop atomicity (offline finding) | Offline guard probe; hardware C1–C5 after a fix | **Finding filed** 2026-11-26: stop lost between `validate` and `start`; not fixed (frozen baseline) |
 
 C1 (idle stop), C3 (busy rejection) and C4 (idempotent replay) already pass and
 must remain green.
@@ -236,7 +279,10 @@ must remain green.
 
 1. Which implementation is the M6 target: this `jcheng_system_core` gateway, or
    the deployed `armpi_debug_gateway` on port 8766? The probe covers only the
-   former.
+   former. **R7 finding (2026-11-26):** the deployed guard can lose a stop
+   between `validate` and `start`; choosing it requires the atomic-dispatch or
+   generation-token fix first. Evidence:
+   `e2e/reports/20261126_deployed_guard_race/`.
 2. Should a replay of an in-flight idempotency key wait or fail fast? The
    contract must say.
 3. Is a gateway tick thread acceptable alongside the ROS executor's own tick,
