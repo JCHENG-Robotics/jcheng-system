@@ -1,8 +1,9 @@
 # Execution model revision — proposal
 
 > Status: **Implemented (R1–R4), verified on the mock (R6)** as of 2026-11-26.
-> R5 (stop confirmation fields) remains a proposal pending a
-> `jcheng-interfaces` review and is **not** implemented.
+> R5 (stop confirmation fields) is **filed as a proposal** in
+> `jcheng-interfaces/docs/proposals/stop-confirmation-levels.md`; the schema
+> review is pending and it is **not** implemented.
 > Trigger: P0 concurrency probe C2 failed. Evidence:
 > [`e2e/reports/20261126_concurrency_probe/`](../e2e/reports/20261126_concurrency_probe/README.md).
 > Re-run evidence:
@@ -214,7 +215,7 @@ without the harness delay (finding F5). Proposed:
 | R2 | Stop path with `STOPPING` and `MOTION_BUSY` until the worker exits | C2-stress 0 completed-after-stop, 0 500 | **Done** (mock, 2026-11-26) |
 | R3 | Tick thread and lease checks before completion | C5, C5b PASS | **Done** (mock, 2026-11-26) |
 | R4 | ROS runtime cancel path; no lock across execute/tick | Same probes through the runtime adapter | **Done**; `m5-mock` green in CI run 45748815799 |
-| R5 | `StopResult` confirmation fields (contract proposal) | Interfaces review | **Open**; not implemented |
+| R5 | `StopResult` confirmation fields (contract proposal) | Interfaces review | **Proposal filed** 2026-11-26; schema review pending; not implemented |
 | R6 | Re-run C1–C5 on the mock and on the deployed gateway model | M3 unblock | **Mock done**; deployed gateway pending for M4 |
 
 C1 (idle stop), C3 (busy rejection) and C4 (idempotent replay) already pass and

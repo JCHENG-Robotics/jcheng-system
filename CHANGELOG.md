@@ -93,6 +93,10 @@ All notable changes to this project are documented here. Format based on
 
 ### Changed
 
+- R5 is filed as a contract proposal in
+  `jcheng-interfaces/docs/proposals/stop-confirmation-levels.md`:
+  `StopResponse` would add `confirmation` (request accepted / backend
+  confirmed) and `physical_stop: unverified`. No schema or hash change yet.
 - `MotionArbiter` now has a single terminal writer and a session lock:
   `_complete_once` is the only place a result and its idempotency entry are
   written; `stop()` completes `ABORTED` but keeps the session active until the
