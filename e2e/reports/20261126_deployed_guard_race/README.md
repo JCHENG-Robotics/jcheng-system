@@ -27,6 +27,17 @@ This is the C2p "stop before publish" window that `jcheng_system_core` closed
 in R2 by ordering publish and stop-hold under one session lock. The deployed
 gateway is a different implementation and has not been patched.
 
+### 1.1 Secondary observation: the guard stop is not a latch
+
+`mark_stopped` clears the active plan and records `last_stop`, but it does not
+set `MotionGuard._safety_stop`. A second `validate` is accepted immediately
+(`guard_safety_stop: false`, `second_command_allowed: true`).
+
+This may be by design if an external safety supervisor owns the latch. It is
+still a target-selection fact: if the deployed gateway is treated as the motion
+authority, its `/motion/stop` is a hold, not a latch, and a caller can dispatch
+again right after a stop. The system `jcheng_system_core` stop path latches.
+
 ## 2. Code references
 
 | Fact | Location (frozen baseline) |
@@ -67,6 +78,8 @@ Raw output: [`pytest.txt`](pytest.txt), [`gate.txt`](gate.txt).
 - A stop request can be acknowledged, followed by the command being published
   and reported `completed`. The stop is not merely unconfirmed; it is
   **lost** in the guard state.
+- The guard stop is not a latch. If no external supervisor latches, a new
+  command is accepted immediately after a stop.
 - The M4/M5 motion target cannot rely on the deployed gateway's current
   dispatch/stop ordering. This must be fixed or the motion target must move to
   the already-fixed `jcheng_system_core` gateway.

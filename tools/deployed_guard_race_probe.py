@@ -162,6 +162,34 @@ def _case(motion: Any, config: Any, *, stop_between: bool) -> dict[str, Any]:
     }
 
 
+def _latch_case(motion: Any, config: Any) -> dict[str, Any]:
+    """Observe whether a guard stop prevents the next command by itself."""
+
+    guard = motion.MotionGuard(config)
+    measured = _measured()
+    plan = guard.validate(_payload(config, "first"), measured, 10.0)
+    guard.start(plan, measured)
+    guard.mark_stopped(measured, 10.5)
+    state_after_stop = guard.status()["state"]
+    safety_stop = guard.status().get("safety_stop")
+    allowed = True
+    try:
+        guard.validate(_payload(config, "second"), measured, 10.6)
+    except motion.MotionRejected:
+        allowed = False
+    return {
+        "state_after_stop": state_after_stop,
+        "guard_safety_stop": safety_stop,
+        "second_command_allowed": allowed,
+        "note": (
+            "The deployed gateway's stop is a hold, not a guard latch. "
+            "A latch must come from the external safety supervisor; if this "
+            "gateway is the motion authority, a second command is accepted "
+            "immediately after a stop."
+        ),
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -177,6 +205,7 @@ def main(argv: list[str] | None = None) -> int:
     config = _config(motion)
     normal = _case(motion, config, stop_between=False)
     race = _case(motion, config, stop_between=True)
+    latch = _latch_case(motion, config)
     source = args.gateway_src / "armpi_debug_gateway" / "motion.py"
     workspace = Path(__file__).resolve().parents[2]
     try:
@@ -190,11 +219,16 @@ def main(argv: list[str] | None = None) -> int:
         "hardware": "none",
         "ros_imported": False,
         "config": "synthetic test mapping; not a calibration",
-        "cases": {"control": normal, "race": race},
+        "cases": {"control": normal, "race": race, "latch": latch},
         "finding": (
             "STOP_LOST_BETWEEN_VALIDATE_AND_START"
             if race["stop_lost"]
             else "NOT_REPRODUCED"
+        ),
+        "secondary_observation": (
+            "STOP_NOT_LATCHED_BY_GUARD"
+            if latch["second_command_allowed"]
+            else "STOP_LATCHED"
         ),
         "severity": "P0 for M4 if the deployed gateway is the motion target",
         "code_order": {

@@ -204,6 +204,11 @@ stop_motion:                         publish(hold) -> mark_stopped()
 `idle -> executing -> completed` for that interleaving; the control case
 (stop after start) stays `stopped`.
 
+The guard stop is also **not a latch**: `mark_stopped` clears the active plan
+but does not set `_safety_stop`, and a second `validate` is accepted
+immediately. That is acceptable only if an external supervisor owns the latch;
+if this gateway is the motion authority, it must not be.
+
 Required change before a motion session:
 
 - make dispatch atomic under one guard/session lock (validate, stop-latch
