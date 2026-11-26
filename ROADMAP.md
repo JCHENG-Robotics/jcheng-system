@@ -46,7 +46,10 @@ window offline: send and stop share `_active_lock`, so a stop before the send
 publishes no command. Evidence:
 [`e2e/reports/20261126_vendor_executor_c2p/`](e2e/reports/20261126_vendor_executor_c2p/README.md).
 The deployed legacy gateway's R7 race remains a documented risk but is not on
-the chosen path. A hardware C1–C5 session is still required.
+the chosen path. R9 composes the M5.2 executor behind the HTTP `GatewayApp`
+(`VendorStack`, `mode="hardware"`) and proves `/v1/motion/execute` offline. A
+ROS process owning `VendorBridge`/bus polling and a hardware C1–C5 session
+remain.
 
 ## Milestones
 

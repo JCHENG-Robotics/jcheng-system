@@ -8,6 +8,13 @@ All notable changes to this project are documented here. Format based on
 
 ### Added
 
+- R9: `jcheng_vendor.gateway_stack.VendorStack` composes the M5.2
+  `HardwareExecutor` with the HTTP `GatewayApp`; `VendorGatewayHardware`
+  adapts the read surface, and `mode="hardware"` / `capabilities=("hardware",)`
+  replace the hard-coded mock advertisement. `MockStack` keeps the mock mode.
+  Offline `tests/test_vendor_gateway_stack.py` drives `/v1/motion/execute` to a
+  bus-verified `COMPLETED`. The ROS process that owns `VendorBridge` and polls
+  the bus is still required.
 - R8: `jcheng_vendor.executor.HardwareExecutor` now orders the bridge send and
   the stop under the same `_active_lock`. A stop accepted before the send
   publishes no command; a stop after the send orders its hold after the write.

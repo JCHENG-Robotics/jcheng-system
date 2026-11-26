@@ -56,6 +56,22 @@
 “stop 在 send 后”和正常 bus-verified 完成；证据
 `e2e/reports/20261126_vendor_executor_c2p/`。实机 C1–C5 仍需单独授权。
 
+### M5.2 HTTP 网关组合（R9，2026-11-26）
+
+`jcheng_vendor.gateway_stack.VendorStack` 把 `HardwareExecutor` 接入
+`GatewayApp`：
+
+- `arbiter` = `HardwareExecutor`；
+- `hardware` = `VendorGatewayHardware` 适配器（`state(now)` /
+  `bus_read(now)` / `hold(now)` / `bus_failed`）；
+- `mode="hardware"`、`capabilities=("hardware",)`；`MockStack` 保持
+  `mock`。
+
+离线测试 `tests/test_vendor_gateway_stack.py` 用假桥驱动
+`/v1/motion/execute` 到 bus-verified `COMPLETED`。仍缺少 ROS 进程（持有
+`VendorBridge`、0.25 s 总线轮询、`GatewayServer`、`arbiter.tick`）与实机
+C1–C5。
+
 ## 2. 服务/action 名称（M5.1）
 
 ```text

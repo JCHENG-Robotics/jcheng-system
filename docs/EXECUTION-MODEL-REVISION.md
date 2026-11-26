@@ -1,7 +1,7 @@
 # Execution model revision — proposal
 
-> Status: **Implemented (R1–R4, R8), verified on the mock (R6)** as of
-> 2026-11-26. **M4/M5 motion target: the `jcheng_system_core` gateway with the
+> Status: **Implemented (R1–R4, R8), mock verified (R6), hardware composition
+> offline (R9)** as of 2026-11-26. **M4/M5 motion target: the `jcheng_system_core` gateway with the
 > M5.2 `jcheng_vendor` hardware executor**, not the frozen
 > `armpi_debug_gateway` (decision 2026-11-26).
 > R5 (stop confirmation fields) is merged as a proposal in
@@ -204,6 +204,26 @@ A stop before the send now aborts without publishing; a stop after the send
 orders its hold after the command write. The executor still holds no lock
 across the duration wait or the bus read.
 
+### 2.7 Hardware-backed HTTP gateway composition (R9)
+
+The gateway process previously built only `MockStack`, which uses
+`MotionArbiter`. R9 adds `jcheng_vendor.gateway_stack.VendorStack`:
+
+- `arbiter` is the M5.2 `HardwareExecutor`;
+- `hardware` is a thin `VendorGatewayHardware` adapter that supplies
+  `state(now)`, `bus_read(now)`, `hold(now)` and `bus_failed` for `GatewayApp`;
+- `mode="hardware"` and `capabilities=("hardware",)`, so `/v1/health` and the
+  WS hello no longer claim `mock`;
+- `MockStack` keeps `mode="mock"` and `capabilities=("mock",)`.
+
+Offline evidence: `tests/test_vendor_gateway_stack.py` builds the stack with a
+fake bridge and drives `/v1/motion/execute` through `GatewayApp` to a
+bus-verified `COMPLETED`. No ROS, device or hardware is used.
+
+Still required for a deployable node: a ROS process that owns `VendorBridge`,
+polls the bus (the vendor runtime uses 0.25 s), serves `GatewayServer` and runs
+`arbiter.tick`; and a hardware C1–C5 session.
+
 ## 3. Stop confirmation levels
 
 The revision separates three levels that are currently collapsed into
@@ -245,6 +265,7 @@ without the harness delay (finding F5). Proposed:
 | R6 | Re-run C1–C5 on the mock and on the deployed gateway model | M3 unblock | **Mock done**; hardware C1–C5 still required |
 | R7 | Deployed `armpi_debug_gateway` dispatch/stop ordering | Offline probe; legacy gateway only | **Finding filed** 2026-11-26; not the chosen target, not fixed |
 | R8 | M5.2 `HardwareExecutor` send/stop ordering | C2p offline: no send after an accepted stop | **Done** (offline, 2026-11-26): send and stop share `_active_lock`; `tests/test_vendor_executor_c2p.py`; `e2e/reports/20261126_vendor_executor_c2p/` |
+| R9 | Hardware-backed HTTP gateway composition | `/v1/execute` reaches `HardwareExecutor`; health advertises `hardware` | **Composition done offline** 2026-11-26 (`VendorStack` + fake bridge); ROS node/launch and hardware C1–C5 pending |
 
 C1 (idle stop), C3 (busy rejection) and C4 (idempotent replay) already pass and
 must remain green.
