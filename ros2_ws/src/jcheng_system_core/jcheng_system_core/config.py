@@ -25,7 +25,7 @@ def _sha256_json(value: Any) -> str:
 @dataclass(frozen=True)
 class JointLimit:
     name: str
-    servo_id: int
+    servo_id: int | None
     lower_rad: float
     upper_rad: float
     max_velocity_rad_s: float
@@ -58,7 +58,7 @@ class RobotProfile:
         for item in raw.get("joints", []):
             joint = JointLimit(
                 name=str(item["name"]),
-                servo_id=int(item["servo_id"]),
+                servo_id=int(item["servo_id"]) if item.get("servo_id") is not None else None,
                 lower_rad=float(item["lower_rad"]),
                 upper_rad=float(item["upper_rad"]),
                 max_velocity_rad_s=float(item["max_velocity_rad_s"]),

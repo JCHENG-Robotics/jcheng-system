@@ -17,7 +17,7 @@
 | M6 S17 real MoveIt plan-only | Complete (2026-11-25) | `SUCCESS`, 8-point plan, 0 controller servers, no command topics; `docs/M6-SCOPE.md` |
 | ArmPi Ultra runtime image | Complete (2026-11-25) | `armpi-ultra:flatten-20261125`, 7.1 GB; `deploy/armpi-ultra/docs/ACCEPTANCE-20261125.md` |
 | M6 S14 base / full G8 | Not started | — |
-| Teleoperation intake core + ROS subscriber + test-only simulation bridge (ArmPi, Gate-2) | Complete, mock/simulation only (2026-11-26); Humble build/tests pass | `tests/test_teleop.py`; `tests_ros/test_teleop_runtime.py`; `e2e/reports/20261126_teleop_sim/`; `e2e/reports/20261126_teleop_humble/`; `docs/TELEOP-INTAKE.md` |
+| Teleoperation intake core + ROS subscriber + test-only simulation bridge (ArmPi, Gate-2; PiPER X core) | Complete, mock/simulation only (2026-11-26); domain-42 Gate-2 L3 and Humble build/tests pass | `tests/test_teleop.py`; `tests_ros/test_teleop_runtime.py`; `e2e/reports/20261126_teleop_sim/`; `e2e/reports/20261126_teleop_humble/`; `docs/TELEOP-INTAKE.md` |
 | S7 stale-state injection, S9 runtime publisher | Not verified | — |
 
 ### P0 execution-model blocker — resolved on the mock (2026-11-26)

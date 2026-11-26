@@ -109,3 +109,15 @@ def test_gate2_two_joint_profile_steps(root):
     result = intake.tick(0.0)
     assert result is not None and result.outcome == "COMPLETED"
     assert stack.hardware.positions == pytest.approx([0.05, -0.05], abs=1e-6)
+
+
+def test_piperx_six_joint_profile_steps(root):
+    stack = MockStack.build(root, robot="piper_x", clock=ManualClock())
+    stack.arm()
+    lease = stack.lease(holder="teleop", scope="arm", priority=40, ttl_ms=5000, deadman_required=True)
+    intake = TeleopIntake(stack)
+    sample = _sample(stack, lease.lease_id, velocities=(0.5, 0.5, -0.5, 0.5, -0.5, 0.5))
+    intake.on_sample(sample, now=0.0)
+    result = intake.tick(0.0)
+    assert result is not None and result.outcome == "COMPLETED"
+    assert stack.hardware.positions == pytest.approx([0.05, 0.05, -0.05, 0.05, -0.05, 0.05], abs=1e-6)

@@ -30,8 +30,11 @@ class RosSimHardwareBridge:
         self.battery_voltage = 0.0
         self.truth = "measured"
         self.verification = "simulated"
-        self.fresh = False
-        self.stamp = 0.0
+        # The sim plant starts at the profile's zero pose. Seed a fresh state
+        # so the runtime's first safety tick does not latch STATE_STALE before
+        # the first /sim/joint_states message arrives.
+        self.fresh = True
+        self.stamp = float(clock.now())
         self.publishers = {"jcheng_hardware"}
         self.bus_failed = False
         qos = QoSProfile(

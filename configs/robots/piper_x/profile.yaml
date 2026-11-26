@@ -1,0 +1,15 @@
+# Simulation-only system profile for the 6-DoF PiPER X arm.
+# No servo_id, gripper, workspace or table plane: v1 is bus-servo specific and
+# cannot express a CAN/prismatic arm. This profile is for velocity-only mock
+# teleoperation and is not a hardware claim.
+joints:
+  - {name: joint1, lower_rad: -2.6179938, upper_rad: 2.6179938, max_velocity_rad_s: 1.5, max_acceleration_rad_s2: 1.0}
+  - {name: joint2, lower_rad: 0.0, upper_rad: 3.1415926, max_velocity_rad_s: 1.5, max_acceleration_rad_s2: 1.0}
+  - {name: joint3, lower_rad: -2.9670597, upper_rad: 0.0, max_velocity_rad_s: 1.5, max_acceleration_rad_s2: 1.0}
+  - {name: joint4, lower_rad: -1.553343, upper_rad: 1.553343, max_velocity_rad_s: 1.5, max_acceleration_rad_s2: 1.0}
+  - {name: joint5, lower_rad: -1.553343, upper_rad: 1.553343, max_velocity_rad_s: 1.5, max_acceleration_rad_s2: 1.0}
+  - {name: joint6, lower_rad: -2.88, upper_rad: 2.88, max_velocity_rad_s: 1.5, max_acceleration_rad_s2: 1.0}
+profiles:
+  pose: {max_velocity_rad_s: 0.5}
+  step: {max_step_rad: 0.35, min_duration_s: 0.5, max_duration_s: 10.0}
+source_hashes: {}
