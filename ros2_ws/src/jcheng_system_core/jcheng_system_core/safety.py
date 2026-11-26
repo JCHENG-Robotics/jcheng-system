@@ -336,6 +336,8 @@ class SafetySupervisor:
         violations: list[str] = []
         position = pose.get("position", {})
         x, y, z = self._tcp(position)
+        if self.profile.workspace is None or self.profile.table_plane is None:
+            return False, False, ["robot profile has no workspace/table plane"]
         lower = self.profile.workspace["lower"]
         upper = self.profile.workspace["upper"]
         if not (lower[0] <= x <= upper[0] and lower[1] <= y <= upper[1] and lower[2] <= z <= upper[2]):
@@ -530,6 +532,8 @@ class SafetySupervisor:
             gripper = command.gripper
             if gripper is None:
                 return self._reject(now, ErrorCode.INVALID_COMMAND, "gripper command is required", checks)
+            if self.profile.gripper is None:
+                return self._reject(now, ErrorCode.CONFIG_INVALID, "robot profile has no gripper", checks)
             config = self.profile.profiles.get("gripper", {})
             minimum = float(config.get("min_rad", self.profile.gripper_closed_rad))
             maximum = float(config.get("max_rad", self.profile.gripper_open_rad))

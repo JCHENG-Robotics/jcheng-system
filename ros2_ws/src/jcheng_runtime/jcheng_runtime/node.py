@@ -61,10 +61,15 @@ class RuntimeNode(Node):
         self.declare_parameter("root", "")
         self.declare_parameter("evidence_path", "")
         self.declare_parameter("sim_bridge", False)
+        self.declare_parameter("robot", "armpi_ultra")
         root_value = str(self.get_parameter("root").value or os.environ.get("JCHENG_ROOT", ""))
         root = Path(root_value).expanduser() if root_value else find_repo_root()
         evidence = str(self.get_parameter("evidence_path").value or "") or None
-        self.stack = MockStack.build(root, evidence_path=evidence)
+        self.stack = MockStack.build(
+            root,
+            evidence_path=evidence,
+            robot=str(self.get_parameter("robot").value or "armpi_ultra"),
+        )
         if bool(self.get_parameter("sim_bridge").value):
             from .sim_bridge import RosSimHardwareBridge
 

@@ -74,8 +74,9 @@ bash scripts/check_repo_gate.sh
 
 ## 4. Open items for M2
 
-1. Gate-2 and PiPER X system profiles and a multi-robot simulation run; the
-   current L3 probe is ArmPi only.
+1. Gate-2 system profile core test exists (`robot:=gate2_arm`), but its
+   simulation L3 probe did not move the plant in the first attempt; PiPER X is
+   still blocked by the v1 profile schema. A multi-robot L3 run is not proven.
 2. A teleop-side DDS publisher with an HTTP lease adapter (or the operator
    console's external lease) and a `TeleopState` status surface. The current
    publisher takes an operator-supplied lease id.

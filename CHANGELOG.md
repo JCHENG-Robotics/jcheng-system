@@ -28,6 +28,10 @@ All notable changes to this project are documented here. Format based on
 - `docs/TELEOP-INTAKE.md`: M2 scope, limits and open items.
 - `e2e/reports/20261126_teleop_humble/`: Humble container build and tests
   (`tests` 45 pass, `tests_ros` 12 pass).
+- Optional `gripper`/`workspace`/`table_plane` robot-profile fields and a
+  simulation-only Gate-2 profile; `MockStack.build(robot=...)` and the runtime
+  `robot` parameter select it. `tests/test_teleop.py` covers a two-joint step.
+  Gate-2 L3 simulation is not proven; PiPER X remains blocked.
 
 - `tools/concurrency_probe.py`: P0 probes C1–C5 plus a stop/execute stress
   loop against the real mock gateway application and `MockStack`, with a
