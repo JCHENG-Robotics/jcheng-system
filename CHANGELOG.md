@@ -36,8 +36,18 @@ All notable changes to this project are documented here. Format based on
 - Optional `servo_id`/`gripper`/`workspace`/`table_plane` profile fields and
   simulation-only Gate-2 and PiPER X profiles; `MockStack.build(robot=...)` and
   the runtime `robot` parameter select them. `tests/test_teleop.py` covers
-  two-joint and six-joint steps. Gate-2 L3 moves both joints to about ±0.501 rad;
-  PiPER X L3 is still not proven and v1 is not canonical for a CAN arm.
+  two-joint and six-joint steps. v1 is not canonical for a CAN arm.
+- `tools/teleop_sim_probe.py` is profile-driven: `--joints`, `--velocity`,
+  `--duration-s`, `--rate-hz` and `--sim-domain`, which opens a second
+  `rclpy` context for `/sim/joint_states` while services and intent stay on the
+  capability domain.
+- `e2e/reports/20261126_teleop_domain42_armpi/`: ArmPi canonical-domain L3.
+  Runtime/probe on domain 42, bridge/plant on 43; joint1 0 -> 0.2375 rad.
+- `e2e/reports/20261126_teleop_piperx_mock/`: PiPER X six-joint L3 against the
+  mock plant. All six joints moved ±0.1379 rad; simulation-only, no gripper,
+  CAN or hardware claim.
+- `docs/robots/piper-x.md`: upstream pointers, preconditions and the reasons no
+  PiPER X bridge exists.
 
 - `tools/concurrency_probe.py`: P0 probes C1–C5 plus a stop/execute stress
   loop against the real mock gateway application and `MockStack`, with a

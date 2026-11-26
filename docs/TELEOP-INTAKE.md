@@ -74,19 +74,21 @@ bash scripts/check_repo_gate.sh
 
 ## 4. Open items for M2
 
-1. Gate-2 L3 simulation is proven (`robot:=gate2_arm`, both joints moved to
-   about ±0.501 rad). A simulation-only PiPER X system profile and a 6-joint
-   core test exist, but v1 cannot express a CAN arm canonically and a PiPER X
-   L3 run is not proven.
+1. L3 simulation is proven in three shapes: ArmPi and Gate-2 on domain 43 only,
+   Gate-2 on canonical domain 42 + domain-43 bridge
+   (`e2e/reports/20261126_teleop_domain42/`), ArmPi on the same split
+   (`e2e/reports/20261126_teleop_domain42_armpi/`) and PiPER X mock with six
+   joints (`e2e/reports/20261126_teleop_piperx_mock/`). PiPER X is
+   simulation-only: v1 cannot express a CAN/prismatic arm canonically.
 2. A teleop-side DDS publisher with an HTTP lease adapter (or the operator
    console's external lease) and a `TeleopState` status surface. The current
    publisher takes an operator-supplied lease id.
-3. The canonical domain-42 runtime + domain-43 bridge split is proven for
-   Gate-2 (see `e2e/reports/20261126_teleop_domain42/`); ArmPi is still the
-   domain-43 harness result.
-3. QoS and timing characterization; the current L3 probe uses domain 43 and
-   does not characterize plant tracking/latency as a bound.
-4. A strict mode/purpose distinction in the future `TeleopCommand` v0.2.
+3. A `robot-profile.v2` proposal for CAN/prismatic arms and, only after the
+   preconditions in `docs/robots/piper-x.md`, a PiPER X driver bridge on domain
+   41 behind `ExecuteMotion`.
+4. QoS and timing characterization; the L3 probes do not characterize plant
+   tracking/latency as a bound.
+5. A strict mode/purpose distinction in the future `TeleopCommand` v0.2.
 
 ## 5. Related
 
