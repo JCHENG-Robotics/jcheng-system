@@ -64,8 +64,11 @@ class TeleopIntake:
             self._reject(ErrorCode.INVALID_COMMAND, "joint velocity width does not match the profile")
         if not all(math.isfinite(float(value)) for value in sample.joint_velocities_rad_s):
             self._reject(ErrorCode.INVALID_COMMAND, "non-finite teleop velocity")
-        if sample.stamp_s < 0 or abs(now - sample.stamp_s) > self.max_stamp_skew_s:
-            self._reject(ErrorCode.INVALID_COMMAND, "teleop stamp outside the accepted window")
+        if sample.stamp_s < 0 or not math.isfinite(sample.stamp_s):
+            self._reject(ErrorCode.INVALID_COMMAND, "teleop stamp is invalid")
+        # Liveness uses the caller's receipt time. The message stamp is for
+        # provenance/latency; comparing it to the monotonic clock would reject
+        # every ROS wall-clock stamp.
         if self.last_seq is not None and sample.seq <= self.last_seq:
             self._reject(ErrorCode.INVALID_COMMAND, "teleop seq must strictly increase")
         if not sample.deadman:

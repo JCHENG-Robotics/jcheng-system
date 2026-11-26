@@ -38,8 +38,10 @@ mock hardware / future simulation bridge
 - The step velocity is capped by the teleop intake (`0.5 rad/s` default) and
   the profile pose limit; the arbiter still validates start distance, step
   limit and bus verification.
-- The intake is a test/system-core object. A ROS 2 Humble node, DDS QoS and
-  the simulation bridge are not implemented on this branch yet.
+- A ROS 2 transport wrapper exists in `jcheng_runtime`: it subscribes
+  `/jcheng/intent/teleop` with best-effort/depth-1 QoS and calls the same
+  intake on the runtime 20 Hz timer. The simulation bridge is not implemented
+  yet.
 - Deadman release and input timeout are **non-latching** teleop aborts; an
   explicit `TeleopIntake.stop()` calls `MotionArbiter.stop()` and latches.
 - A lease is checked on every sample; no lease is rejected with the canonical
@@ -69,15 +71,14 @@ bash scripts/check_repo_gate.sh
 
 ## 4. Open items for M2
 
-1. A ROS 2 Humble subscriber for `jcheng_interfaces/msg/TeleopCommand` and a
-   20 Hz timer on domain 42.
-2. A simulation bridge that supplies measured state and accepts multi-joint
+1. A simulation bridge that supplies measured state and accepts multi-joint
    targets on domain 43; it must remain test-only and must not make the
    simulation plant a motion authority.
-3. A teleop-side DDS publisher with an HTTP lease adapter (or the operator
+2. A teleop-side DDS publisher with an HTTP lease adapter (or the operator
    console's external lease) and a `TeleopState` status surface.
-4. QoS and timing characterization; the current tests use `ManualClock`.
-5. A strict mode/purpose distinction in the future `TeleopCommand` v0.2.
+3. QoS and timing characterization; the current tests use `ManualClock` for
+   core tests and the real runtime clock for the ROS wrapper.
+4. A strict mode/purpose distinction in the future `TeleopCommand` v0.2.
 
 ## 5. Related
 

@@ -17,7 +17,7 @@ from typing import Any
 import uuid
 
 from jcheng_interfaces.action import ExecuteMotion
-from jcheng_interfaces.msg import MotionFeedback, SafetyState
+from jcheng_interfaces.msg import MotionFeedback, SafetyState, TeleopCommand
 from jcheng_interfaces.srv import (
     AcquireLease,
     ArmSystem,
@@ -34,11 +34,13 @@ from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 from std_msgs.msg import Bool
 
 from jcheng_system_core.config import find_repo_root
 from jcheng_system_core.errors import MotionRejected
 from jcheng_system_core.stack import MockStack
+from jcheng_system_core.teleop import TeleopIntake, TeleopSample
 
 from .conversions import (
     capabilities,
@@ -62,6 +64,7 @@ class RuntimeNode(Node):
         root = Path(root_value).expanduser() if root_value else find_repo_root()
         evidence = str(self.get_parameter("evidence_path").value or "") or None
         self.stack = MockStack.build(root, evidence_path=evidence)
+        self.teleop = TeleopIntake(self.stack)
         self._lock = threading.RLock()
         self._feedback_seq = 0
         callback_group = ReentrantCallbackGroup()
@@ -148,6 +151,18 @@ class RuntimeNode(Node):
             "/safety_stop",
             self._on_safety_stop,
             10,
+            callback_group=callback_group,
+        )
+        teleop_qos = QoSProfile(
+            depth=1,
+            history=HistoryPolicy.KEEP_LAST,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+        )
+        self.create_subscription(
+            TeleopCommand,
+            "/jcheng/intent/teleop",
+            self._on_teleop,
+            teleop_qos,
             callback_group=callback_group,
         )
         self.create_timer(0.02, self._tick, callback_group=callback_group)
@@ -322,6 +337,7 @@ class RuntimeNode(Node):
     def _cancel(self, goal_handle: Any) -> CancelResponse:
         # The arbiter serializes its own transitions; cancel must not wait on
         # the lock held by an executing goal.
+        self.teleop.abort("action_cancel")
         self.stack.arbiter.stop("action_cancel", "action goal cancelled")
         return CancelResponse.ACCEPT
 
@@ -353,9 +369,28 @@ class RuntimeNode(Node):
 
     # ---- runtime ----
 
+    def _on_teleop(self, msg: TeleopCommand) -> None:
+        stamp_s = float(msg.header.stamp.sec) + float(msg.header.stamp.nanosec) / 1e9
+        sample = TeleopSample(
+            seq=int(msg.seq),
+            lease_id=str(msg.lease_id),
+            source=str(msg.source),
+            contract=contract_to_core(msg.contract),
+            mode=str(msg.mode),
+            joint_velocities_rad_s=tuple(float(value) for value in msg.joint_velocity_rad_s),
+            deadman=bool(msg.deadman),
+            stamp_s=stamp_s,
+            received_s=self.stack.clock.now(),
+        )
+        try:
+            self.teleop.on_sample(sample)
+        except MotionRejected as exc:
+            self.get_logger().warning(f"teleop rejected: {exc.code}: {exc.message}")
+
     def _on_safety_stop(self, msg: Bool) -> None:
         if not msg.data:
             return
+        self.teleop.abort("safety_stop")
         self.stack.arbiter.stop("safety_stop", "external /safety_stop")
         state = self.stack.safety.current_state()
         self._safety_pub.publish(safety_to_msg(state, self.stack.clock))
@@ -365,6 +400,11 @@ class RuntimeNode(Node):
         # an execute is in flight.
         self.stack.sync_state()
         self.stack.arbiter.tick()
+        result = self.teleop.tick()
+        if result is not None and result.outcome != "COMPLETED":
+            self.get_logger().warning(
+                f"teleop step did not complete: {result.outcome}/{result.reason_code}"
+            )
         state = self.stack.safety.current_state()
         self._safety_pub.publish(safety_to_msg(state, self.stack.clock))
 

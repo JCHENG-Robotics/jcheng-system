@@ -16,6 +16,9 @@ All notable changes to this project are documented here. Format based on
   explicit stop latches. Mock only; no vendor or hardware path.
 - `tests/test_teleop.py`: seven L2 tests for step, missing lease, sequence,
   deadman release, timeout, explicit stop and unsupported Cartesian mode.
+- `jcheng_runtime` teleop subscriber: `/jcheng/intent/teleop` (best-effort,
+  depth 1) converts `TeleopCommand` to `TeleopSample`; the 20 Hz runtime timer
+  drives the intake. `tests_ros/test_teleop_runtime.py` adds three ROS tests.
 - `docs/TELEOP-INTAKE.md`: M2 scope, limits and open items.
 
 - `tools/concurrency_probe.py`: P0 probes C1–C5 plus a stop/execute stress
