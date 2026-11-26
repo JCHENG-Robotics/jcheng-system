@@ -1,15 +1,18 @@
 # Execution model revision — proposal
 
-> Status: **Implemented (R1–R4), verified on the mock (R6)** as of 2026-11-26.
-> R5 (stop confirmation fields) is **filed as a proposal** in
-> `jcheng-interfaces/docs/proposals/stop-confirmation-levels.md`; the schema
-> review is pending and it is **not** implemented.
+> Status: **Implemented (R1–R4, R8), verified on the mock (R6)** as of
+> 2026-11-26. **M4/M5 motion target: the `jcheng_system_core` gateway with the
+> M5.2 `jcheng_vendor` hardware executor**, not the frozen
+> `armpi_debug_gateway` (decision 2026-11-26).
+> R5 (stop confirmation fields) is merged as a proposal in
+> `jcheng-interfaces` (#8); the schema and system implementation are pending.
 > Trigger: P0 concurrency probe C2 failed. Evidence:
 > [`e2e/reports/20261126_concurrency_probe/`](../e2e/reports/20261126_concurrency_probe/README.md).
 > Re-run evidence:
 > [`e2e/reports/20261126_concurrency_probe_r2/`](../e2e/reports/20261126_concurrency_probe_r2/README.md).
-> The mock probes are green; the deployed gateway was not probed and M4 still
-> requires C2–C5 there. No motion is authorized by this document.
+> R8 closed the same C2p ordering window in the chosen M5.2 executor offline;
+> a hardware C1–C5 session is still required. No motion is authorized by this
+> document.
 
 ## 1. Problem
 
@@ -178,6 +181,29 @@ stop(operator, reason):
 - The action goal aborts with the session's terminal result; the result is not
   produced a second time by the runtime.
 
+### 2.6 Target decision and M5.2 executor ordering (R8)
+
+On 2026-11-26 the owner chose the **`jcheng_system_core` gateway with the M5.2
+`jcheng_vendor` hardware executor** as the M4/M5 motion target. The frozen
+`armpi_debug_gateway` is not the motion authority; its R7 race remains a
+legacy-gateway risk and must be fixed before that gateway is used for motion.
+
+The chosen `HardwareExecutor` had the same C2p window as the original mock
+bug: `execute()` recorded the active command, then called
+`bridge.pulse_snapshot()` and `send_step()` outside the stop lock. A stop that
+landed in that window published the hold first, and the step was sent after
+it. R8 makes the send and the stop share `_active_lock`:
+
+```text
+execute: ... pulse_snapshot -> [lock: stop? abort : send_step] -> wait
+stop:                            [lock: set stop, latch, hold]
+tick lease loss:                 [lock: set stop, latch, hold]
+```
+
+A stop before the send now aborts without publishing; a stop after the send
+orders its hold after the command write. The executor still holds no lock
+across the duration wait or the bus read.
+
 ## 3. Stop confirmation levels
 
 The revision separates three levels that are currently collapsed into
@@ -215,17 +241,19 @@ without the harness delay (finding F5). Proposed:
 | R2 | Stop path with `STOPPING` and `MOTION_BUSY` until the worker exits | C2-stress 0 completed-after-stop, 0 500 | **Done** (mock, 2026-11-26) |
 | R3 | Tick thread and lease checks before completion | C5, C5b PASS | **Done** (mock, 2026-11-26) |
 | R4 | ROS runtime cancel path; no lock across execute/tick | Same probes through the runtime adapter | **Done**; `m5-mock` green in CI run 45748815799 |
-| R5 | `StopResult` confirmation fields (contract proposal) | Interfaces review | **Proposal filed** 2026-11-26; schema review pending; not implemented |
-| R6 | Re-run C1–C5 on the mock and on the deployed gateway model | M3 unblock | **Mock done**; deployed gateway pending for M4 |
+| R5 | `StopResult` confirmation fields (contract proposal) | Interfaces review | **Proposal merged** (#8); schema/hash and system implementation pending |
+| R6 | Re-run C1–C5 on the mock and on the deployed gateway model | M3 unblock | **Mock done**; hardware C1–C5 still required |
+| R7 | Deployed `armpi_debug_gateway` dispatch/stop ordering | Offline probe; legacy gateway only | **Finding filed** 2026-11-26; not the chosen target, not fixed |
+| R8 | M5.2 `HardwareExecutor` send/stop ordering | C2p offline: no send after an accepted stop | **Done** (offline, 2026-11-26): send and stop share `_active_lock`; `tests/test_vendor_executor_c2p.py`; `e2e/reports/20261126_vendor_executor_c2p/` |
 
 C1 (idle stop), C3 (busy rejection) and C4 (idempotent replay) already pass and
 must remain green.
 
 ## 6. Impact on `jcheng-applications`
 
-- M3 is **paused** until R6. Its supervisor design stays as specified in
-  `jcheng-applications/docs/TASK_ENGINE.md`; the app-side stop-race tests are
-  not a substitute for a correct gateway.
+- M3 is complete on the mock and the R6 mock probes are green. Its supervisor
+  design stays as specified in `jcheng-applications/docs/TASK_ENGINE.md`; the
+  app-side stop-race tests are not a substitute for a correct gateway.
 - No application-layer workaround (retry suppression, outcome rewriting,
   "ignore COMPLETED after stop") is permitted. Those would hide the defect and
   make the run record false.
@@ -234,9 +262,10 @@ must remain green.
 
 ## 7. Open questions
 
-1. Which implementation is the M6 target: this `jcheng_system_core` gateway, or
-   the deployed `armpi_debug_gateway` on port 8766? The probe covers only the
-   former.
+1. **Resolved 2026-11-26:** the M4/M5 target is this `jcheng_system_core`
+   gateway with the M5.2 `jcheng_vendor` hardware executor. The deployed
+   `armpi_debug_gateway` is legacy; R7 is its known risk and it is not the
+   motion authority.
 2. Should a replay of an in-flight idempotency key wait or fail fast? The
    contract must say.
 3. Is a gateway tick thread acceptable alongside the ROS executor's own tick,

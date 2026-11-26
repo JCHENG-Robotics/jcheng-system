@@ -8,6 +8,12 @@ All notable changes to this project are documented here. Format based on
 
 ### Added
 
+- R8: `jcheng_vendor.executor.HardwareExecutor` now orders the bridge send and
+  the stop under the same `_active_lock`. A stop accepted before the send
+  publishes no command; a stop after the send orders its hold after the write.
+  `tests/test_vendor_executor_c2p.py` covers both interleavings and a normal
+  bus-verified completion. Evidence:
+  `e2e/reports/20261126_vendor_executor_c2p/`.
 - `jcheng_system_core.teleop.TeleopIntake`: mock/system-side teleoperation
   intake. It validates contract, lease, sequence, deadman, stamp and mode,
   holds the latest setpoint, and converts it at a bounded period into a
@@ -101,6 +107,9 @@ All notable changes to this project are documented here. Format based on
 
 ### Changed
 
+- M4/M5 motion target (2026-11-26): the `jcheng_system_core` gateway with the
+  M5.2 `jcheng_vendor` hardware executor. The frozen `armpi_debug_gateway` is
+  legacy and not the motion authority; its R7 race is recorded but not fixed.
 - R5 is filed as a contract proposal in
   `jcheng-interfaces/docs/proposals/stop-confirmation-levels.md`:
   `StopResponse` would add `confirmation` (request accepted / backend

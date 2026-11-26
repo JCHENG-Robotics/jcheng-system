@@ -36,10 +36,17 @@ Original failure:
 passed `m1-gate`, `m3-mock`, `m4-readonly`, `m5-mock`, `m5-vendor` and
 `m6-replay` on the merged commit.
 
-R5 (`StopResult` confirmation levels) is filed as
-`jcheng-interfaces/docs/proposals/stop-confirmation-levels.md`; the schema
-review is pending. The deployed `armpi_debug_gateway` was not probed, and M4
-must repeat C1–C5 there before any hardware session.
+R5 (`StopResult` confirmation levels) is merged as a proposal in
+`jcheng-interfaces` (#8); the schema and system implementation are pending.
+
+**Target decision (2026-11-26):** the M4/M5 motion target is the
+`jcheng_system_core` gateway with the M5.2 `jcheng_vendor` hardware executor,
+not the frozen `armpi_debug_gateway`. R8 fixed the executor's C2p send/stop
+window offline: send and stop share `_active_lock`, so a stop before the send
+publishes no command. Evidence:
+[`e2e/reports/20261126_vendor_executor_c2p/`](e2e/reports/20261126_vendor_executor_c2p/README.md).
+The deployed legacy gateway's R7 race remains a documented risk but is not on
+the chosen path. A hardware C1–C5 session is still required.
 
 ## Milestones
 
