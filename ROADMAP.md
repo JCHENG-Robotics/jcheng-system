@@ -19,6 +19,22 @@
 | M6 S14 base / full G8 | Not started | — |
 | S7 stale-state injection, S9 runtime publisher | Not verified | — |
 
+### P0 execution-model blocker — resolved on the mock (2026-11-26)
+
+The original probe failed C2: a stop during an in-flight execute produced two
+terminal results and a late `COMPLETED`, and lease loss during a motion was not
+enforced. After R1–R4 (single terminal writer, stop path, lease checks, tick
+thread, runtime cancel path), the re-run passes C1–C5, C5b and a 30-iteration
+stop/execute stress loop with zero double terminals. Evidence:
+[`e2e/reports/20261126_concurrency_probe_r2/`](e2e/reports/20261126_concurrency_probe_r2/README.md).
+Original failure:
+[`e2e/reports/20261126_concurrency_probe/`](e2e/reports/20261126_concurrency_probe/README.md).
+`jcheng-applications` M3 is **unblocked** on the mock.
+
+Still open: R5 (`StopResult` confirmation levels) needs a `jcheng-interfaces`
+review; the deployed `armpi_debug_gateway` was not probed, and M4 must repeat
+C1–C5 there before any hardware session.
+
 ## Milestones
 
 | Milestone | Scope | State | Exit criterion | Evidence |

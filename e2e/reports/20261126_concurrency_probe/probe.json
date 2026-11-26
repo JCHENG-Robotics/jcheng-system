@@ -1,0 +1,120 @@
+{
+  "generated_at": "2026-11-26T10:45:41+0800",
+  "gateway": "jcheng_system_core.gateway.GatewayApp on ThreadingHTTPServer (real process code)",
+  "backend": "MockStack + MockHardwareBridge, wrapped by harness-only settle delay",
+  "harness_note": "The settle delay is added by this probe, not by the product mock. Without it the mock execute path completes in microseconds and no in-flight window exists. No hardware is opened or contacted.",
+  "hardware_touched": false,
+  "probes": [
+    {
+      "id": "C1",
+      "name": "stop while idle",
+      "status": "PASS",
+      "criteria": "HTTP 200, stop_latched true, response < 1 s, no active motion",
+      "observed": {
+        "http_status": 200,
+        "stop_latched": true,
+        "elapsed_s": 0.0009,
+        "active_motion": false
+      }
+    },
+    {
+      "id": "C2",
+      "name": "stop while execute is in flight",
+      "status": "FAIL",
+      "criteria": "execute still pending when stop is issued; stop 200 < 1 s; execute 200 with ABORTED; exactly one terminal completion",
+      "observed": {
+        "execute_pending_before_stop": true,
+        "stop_http_status": 200,
+        "stop_elapsed_s": 0.0011,
+        "stop_latched": true,
+        "execute_http_status": 200,
+        "execute_outcome": "COMPLETED",
+        "execute_reason_code": "OK",
+        "execute_safety_state": "STOP_LATCHED",
+        "execute_stop_latched": true,
+        "execute_error": null,
+        "execute_elapsed_s": 0.5013064150116406,
+        "terminal_completions": {
+          "ABORTED": 1,
+          "COMPLETED": 1
+        },
+        "final_cached_outcome": "COMPLETED"
+      }
+    },
+    {
+      "id": "C3",
+      "name": "second execute while one is in flight",
+      "status": "PASS",
+      "criteria": "second execute is rejected with REJECTED/MOTION_BUSY and never queued; first completes; one backend command",
+      "observed": {
+        "second_http_status": 200,
+        "second_outcome": "REJECTED",
+        "second_reason_code": "MOTION_BUSY",
+        "first_outcome": "COMPLETED",
+        "backend_commands": 1
+      }
+    },
+    {
+      "id": "C4",
+      "name": "client aborts before the late response; idempotent replay",
+      "status": "PASS",
+      "criteria": "after a dropped connection the same idempotency key returns the cached terminal result and does not execute a second time",
+      "observed": {
+        "replay_http_status": 200,
+        "replay_outcome": "COMPLETED",
+        "backend_commands": 1,
+        "active_after_drop": false
+      }
+    },
+    {
+      "id": "C5",
+      "name": "lease revoked while execute is in flight",
+      "status": "FAIL",
+      "criteria": "execute returns 200 ABORTED with LEASE_REVOKED",
+      "observed": {
+        "lease_request_status": 200,
+        "execute_http_status": 200,
+        "execute_outcome": "COMPLETED",
+        "execute_reason_code": "OK",
+        "safety_state": "ARMED_IDLE",
+        "stop_latched": false
+      }
+    },
+    {
+      "id": "C5b",
+      "name": "lease expired while execute is in flight",
+      "status": "FAIL",
+      "criteria": "execute returns 200 ABORTED with LEASE_EXPIRED",
+      "observed": {
+        "execute_http_status": 200,
+        "execute_outcome": "COMPLETED",
+        "execute_reason_code": "OK",
+        "safety_state": "ARMED_IDLE",
+        "stop_latched": false
+      }
+    },
+    {
+      "id": "C2-stress",
+      "name": "stop/execute race, 30 iterations",
+      "status": "FAIL",
+      "criteria": "zero 500s, zero COMPLETED after stop, one terminal completion per intent",
+      "observed": {
+        "execute_http_statuses": {
+          "200": 30
+        },
+        "execute_outcomes": {
+          "COMPLETED": 30
+        },
+        "terminal_completions_per_intent": {
+          "2": 30
+        },
+        "double_terminal_intents": 30,
+        "completed_after_stop": 30
+      }
+    }
+  ],
+  "summary": {
+    "PASS": 3,
+    "FAIL": 4
+  }
+}
