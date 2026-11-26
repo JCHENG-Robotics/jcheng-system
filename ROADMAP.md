@@ -35,9 +35,10 @@ Original failure:
 passed `m1-gate`, `m3-mock`, `m4-readonly`, `m5-mock`, `m5-vendor` and
 `m6-replay` on the merged commit.
 
-Still open: R5 (`StopResult` confirmation levels) needs a `jcheng-interfaces`
-review; the deployed `armpi_debug_gateway` was not probed, and M4 must repeat
-C1–C5 there before any hardware session.
+R5 (`StopResult` confirmation levels) is filed as
+`jcheng-interfaces/docs/proposals/stop-confirmation-levels.md`; the schema
+review is pending. The deployed `armpi_debug_gateway` was not probed, and M4
+must repeat C1–C5 there before any hardware session.
 
 ## Milestones
 
