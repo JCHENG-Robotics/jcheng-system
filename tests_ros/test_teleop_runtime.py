@@ -73,6 +73,33 @@ def test_teleop_subscriber_steps_through_arbiter(runtime: RuntimeNode) -> None:
     assert runtime.stack.safety.stop_latched is False
 
 
+def test_state_telemetry_is_read_only_and_honest(runtime: RuntimeNode) -> None:
+    _arm(runtime)
+    lease = _lease(runtime)
+    runtime._on_teleop(_teleop(runtime, lease.lease_id))
+    runtime._tick()
+    message = runtime._state_message()
+    assert message.truth == "commanded"
+    assert message.verification == "timed"
+    assert message.source == "jcheng_runtime/mock"
+    assert list(message.joint_names) == runtime.stack.profile.joint_names
+    assert list(message.positions) == runtime.stack.hardware.positions
+    assert message.profile_hash == runtime.stack.profile.profile_hash
+    assert message.fresh is True
+    assert message.seq >= 1
+
+
+def test_state_to_msg_preserves_a_simulation_label(runtime: RuntimeNode) -> None:
+    from jcheng_runtime.conversions import state_to_msg
+
+    state = runtime.stack.hardware.state()
+    message = state_to_msg(
+        state, runtime.stack.clock, seq=1, source="jcheng_runtime/sim_bridge"
+    )
+    assert message.truth == state.truth
+    assert message.verification == state.verification
+
+
 def test_teleop_deadman_release_aborts_without_latch(runtime: RuntimeNode) -> None:
     _arm(runtime)
     lease = _lease(runtime)

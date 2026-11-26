@@ -11,6 +11,7 @@ from jcheng_interfaces.msg import (
     ControlLease,
     MotionCommand as MotionCommandMsg,
     MotionResult as MotionResultMsg,
+    RobotState as RobotStateMsg,
     SafetyState as SafetyStateMsg,
     ValidationReport as ValidationReportMsg,
 )
@@ -23,6 +24,7 @@ from jcheng_system_core.models import (
     Lease,
     MotionCommand,
     MotionResult,
+    RobotState,
     SafetyState,
     ValidationReport,
 )
@@ -72,6 +74,40 @@ def safety_to_msg(value: SafetyState, clock: Any) -> SafetyStateMsg:
     msg.config_hash = str(value.config_hash)
     msg.profile_hash = str(value.profile_hash)
     msg.last_valid_state_at = ros_time(clock, value.last_valid_state_at)
+    return msg
+
+
+def state_to_msg(
+    value: RobotState,
+    clock: Any,
+    *,
+    seq: int,
+    source: str,
+    truth: str | None = None,
+    verification: str | None = None,
+) -> RobotStateMsg:
+    """Read-only state message.
+
+    `truth`/`verification` default to the hardware port's labels. A caller may
+    override them only to stop a fixture from claiming a measurement: the mock
+    bridge labels itself `measured`/`bus` to exercise the safety path, which is
+    not a provenance claim for a published topic.
+    """
+    msg = RobotStateMsg()
+    msg.header.stamp = ros_time(clock, value.stamp)
+    msg.header.frame_id = "base_link"
+    msg.seq = int(seq)
+    msg.source = str(source)
+    msg.fresh = bool(value.fresh)
+    msg.joint_names = list(value.joint_names)
+    msg.positions = [float(item) for item in value.positions]
+    msg.velocities = [float(item) for item in value.velocities]
+    msg.gripper_position = float(value.gripper_position)
+    msg.base_duty = [float(item) for item in value.base_duty]
+    msg.battery_voltage = float(value.battery_voltage)
+    msg.profile_hash = str(value.profile_hash)
+    msg.truth = str(truth if truth is not None else value.truth)
+    msg.verification = str(verification if verification is not None else value.verification)
     return msg
 
 

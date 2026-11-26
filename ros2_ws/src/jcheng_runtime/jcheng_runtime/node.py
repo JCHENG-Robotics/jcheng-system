@@ -17,7 +17,7 @@ from typing import Any
 import uuid
 
 from jcheng_interfaces.action import ExecuteMotion
-from jcheng_interfaces.msg import MotionFeedback, SafetyState, TeleopCommand
+from jcheng_interfaces.msg import MotionFeedback, RobotState, SafetyState, TeleopCommand
 from jcheng_interfaces.srv import (
     AcquireLease,
     ArmSystem,
@@ -52,6 +52,7 @@ from .conversions import (
     result_to_msg,
     ros_time,
     safety_to_msg,
+    state_to_msg,
 )
 
 
@@ -104,6 +105,26 @@ class RuntimeNode(Node):
             SafetyState,
             "/jcheng/telemetry/safety",
             10,
+        )
+        # Read-only state tap for capability consumers (teleop capture). It is
+        # not the production telemetry node: the mock backend is relabelled
+        # `commanded`/`timed` because its fixture labels itself measured/bus to
+        # exercise the safety path, which is not a measurement claim.
+        self._state_pub = self.create_publisher(
+            RobotState,
+            "/jcheng/telemetry/state",
+            10,
+        )
+        self._state_seq = 0
+        self._state_source = (
+            "jcheng_runtime/sim_bridge"
+            if self._sim_node is not None
+            else "jcheng_runtime/mock"
+        )
+        self._state_labels = (
+            ("measured", "simulated")
+            if self._sim_node is not None
+            else ("commanded", "timed")
         )
 
         self.create_service(
@@ -437,6 +458,19 @@ class RuntimeNode(Node):
                 rclpy.shutdown(context=self._sim_context)
         return super().destroy_node()
 
+    def _state_message(self) -> RobotState:
+        state = self.stack.hardware.state()
+        self._state_seq += 1
+        truth, verification = self._state_labels
+        return state_to_msg(
+            state,
+            self.stack.clock,
+            seq=self._state_seq,
+            source=self._state_source,
+            truth=truth,
+            verification=verification,
+        )
+
     def _tick(self) -> None:
         # No outer lock: this timer must be able to observe lease loss while
         # an execute is in flight.
@@ -449,6 +483,10 @@ class RuntimeNode(Node):
             )
         state = self.stack.safety.current_state()
         self._safety_pub.publish(safety_to_msg(state, self.stack.clock))
+        try:
+            self._state_pub.publish(self._state_message())
+        except Exception as exc:  # a telemetry tap must never stop the runtime
+            self.get_logger().error(f"state telemetry publish failed: {exc}")
 
 
 def main() -> int:

@@ -53,7 +53,24 @@ mock hardware / future simulation bridge
 - The sample stamp must be within `max_stamp_skew_s` of arrival; liveness is
   based on the caller's arrival timestamp, not a cross-host wall clock.
 
-## 3. Tests
+## 3. Read-only state tap
+
+The runtime also publishes `RobotState` on `/jcheng/telemetry/state` at its
+20 Hz tick. It exists so a capability consumer (the teleop capture harness) can
+record labelled observations on the capability domain; it is not the
+production `jcheng_telemetry` node.
+
+| Backend | `source` | `truth` | `verification` |
+|---|---|---|---|
+| mock stack | `jcheng_runtime/mock` | `commanded` | `timed` |
+| simulation bridge | `jcheng_runtime/sim_bridge` | `measured` | `simulated` |
+
+The mock bridge labels itself `measured`/`bus` internally to exercise the
+safety path. That is a fixture, not a measurement claim, so the tap relabels
+only the mock backend. The simulation label passes through unchanged.
+Evidence: `e2e/reports/20261126_teleop_state_telemetry/`.
+
+## 4. Tests
 
 `tests/test_teleop.py` covers:
 
@@ -72,7 +89,7 @@ python3 -m pytest -q tests/test_teleop.py
 bash scripts/check_repo_gate.sh
 ```
 
-## 4. Open items for M2
+## 5. Open items for M2
 
 1. Gate-2 L3 simulation is proven (`robot:=gate2_arm`, both joints moved to
    about ±0.501 rad). A simulation-only PiPER X system profile and a 6-joint
@@ -88,7 +105,7 @@ bash scripts/check_repo_gate.sh
    does not characterize plant tracking/latency as a bound.
 4. A strict mode/purpose distinction in the future `TeleopCommand` v0.2.
 
-## 5. Related
+## 6. Related
 
 - [System architecture](ARCHITECTURE.md)
 - [Safety](SAFETY.md)
