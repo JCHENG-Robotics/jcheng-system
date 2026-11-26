@@ -12,7 +12,7 @@ import secrets
 import time
 from typing import Any
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from threading import Thread
+from threading import Event, Thread
 from urllib.parse import parse_qs, urlparse
 import uuid
 
@@ -370,6 +370,41 @@ class _Handler(BaseHTTPRequestHandler):
         return
 
 
+class TickThread:
+    """Advance time-based state while the gateway process is running.
+
+    The mock has no vendor heartbeat, so each tick takes a fresh mock state
+    reading before calling the arbiter. Without that, the safety supervisor
+    would latch a missing heartbeat after 0.5 s.
+    """
+
+    def __init__(self, stack: MockStack, period_s: float = 0.05) -> None:
+        self.stack = stack
+        self.period_s = max(0.01, float(period_s))
+        self._stop = Event()
+        self._thread: Thread | None = None
+
+    def start(self) -> None:
+        if self._thread is not None:
+            return
+        self._thread = Thread(target=self._run, name="jcheng-gateway-tick", daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=2.0)
+            self._thread = None
+
+    def _run(self) -> None:
+        while not self._stop.wait(self.period_s):
+            try:
+                self.stack.sync_state()
+                self.stack.arbiter.tick()
+            except Exception:  # noqa: BLE001 - the HTTP path reports its own errors
+                continue
+
+
 class GatewayServer:
     def __init__(self, app: GatewayApp, host: str = "127.0.0.1", port: int = 0) -> None:
         self.httpd = ThreadingHTTPServer((host, port), _Handler)
@@ -418,12 +453,17 @@ def main() -> int:
     stack = MockStack.build(root, evidence_path=args.evidence)
     app = GatewayApp(stack, args.token)
     server = GatewayServer(app, host=args.host, port=args.port)
+    tick = TickThread(stack)
     server.start()
+    tick.start()
     print(f"mock gateway listening on http://{args.host}:{server.port}", flush=True)
     try:
         while True:
             time.sleep(1.0)
     except KeyboardInterrupt:
+        pass
+    finally:
+        tick.stop()
         server.stop()
     return 0
 
