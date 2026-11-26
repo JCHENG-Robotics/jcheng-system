@@ -1,12 +1,13 @@
 # Acceptance report — jcheng-system
 
-> Status: **inconclusive** as of 2026-11-25 for v0.3.0-dev.
+> Status: **inconclusive** as of 2026-11-26 for v0.3.0-dev.
 > Operator: JerichoCheng. Reviewer: pending.
 > Scope: M3 mock stack, M4 read-only integration, M5.1 mock transport,
 > M5.2 supervised hardware motion, M6 offline replay/plan-only, the real MoveIt
-> plan-only check, and the ArmPi Ultra image rebuild/publish.
-> The completed gates pass; S14/G8 execution, S7/S9 and trajectory execution
-> have not run, so the system acceptance is not complete.
+> plan-only check, the ArmPi Ultra image rebuild/publish, the gateway
+> `/v1/ws/state` path, the teleop intake and the test-only simulation bridge.
+> The completed gates pass; S14/G8 execution, S7/S9, teleop hardware and
+> trajectory execution have not run, so the system acceptance is not complete.
 > No motion was sent by this documentation change.
 
 ## 1. Acceptance layers
@@ -37,6 +38,10 @@
 | M6 S17 plan-only | L1 | pass — construction and rejection tests | `tests/test_moveit_plan_only.py` |
 | M6 S17 real MoveIt plan-only | L5 | pass — MoveIt 2.5.10, `SUCCESS`, 8-point plan, 0 controller servers, no command topics | `jcheng-manipulation/docs/ecosystem/evidence/m6-s17-20261125/` |
 | ArmPi Ultra image rebuild | L5 | pass — 7.1 GB image preserves 20 nodes / 60 topics and survives reboot | `deploy/armpi-ultra/docs/ACCEPTANCE-20261125.md` |
+| Teleop intake (system core) | L2 | pass — 7 tests (step, lease, sequence, deadman, timeout, stop, mode) | `tests/test_teleop.py` |
+| Teleop ROS subscriber | L2 | pass — 3 tests (step, deadman release, safety stop) | `tests_ros/test_teleop_runtime.py` |
+| Teleop simulation bridge (ArmPi/Gate-2) | L3 | pass — ArmPi joint1 0→0.205 rad; Gate-2 both joints ≈±0.125 rad on domain 42 | `e2e/reports/20261126_teleop_sim/`; `e2e/reports/20261126_teleop_sim_gate2/`; `e2e/reports/20261126_teleop_domain42/` |
+| P0 concurrency probe C1–C5 | L3 | pass — zero double terminals; 30-iteration stop/execute stress | `e2e/reports/20261126_concurrency_probe_r2/` |
 
 ## 3. Verified claims
 
@@ -160,6 +165,7 @@
 | Domain 0 → 41/42 bridge | Not implemented | Capabilities cannot consume telemetry without joining domain 0 |
 | `/tf_static` TRANSIENT_LOCAL QoS | Not adapted | Static transforms may be missed |
 | Unattended operation | Requires an operator; vendor restart moves the arm | Not suitable for unattended motion |
+| Teleop hardware / PiPER X L3 | Only mock and domain-43 simulation bridge paths exist | No teleop hardware or PiPER X claim |
 
 ## 5. Limitations
 
