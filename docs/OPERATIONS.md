@@ -53,7 +53,7 @@ python3 tools/verify_lock.py --root . \
   --require-evidence
 ```
 
-`--remote` 会检查 interfaces v0.1.0 标签提交。
+`--remote` 会检查锁文件中声明的 interfaces 标签提交（当前为 v0.2.0）。
 
 ## 6. M4 只读运行（需单独授权）
 
