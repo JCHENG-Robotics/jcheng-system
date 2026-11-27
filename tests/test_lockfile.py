@@ -95,7 +95,12 @@ def _make_module_repo(tmp_path: Path, version: str = "0.1.0", contract_hash: str
 def test_module_checkout_matches_pin(tmp_path: Path) -> None:
     path, commit = _make_module_repo(tmp_path)
     errors = _module_checkout_errors(
-        "jcheng-fake", {"version": "0.1.0", "commit": commit}, path, HASH, "0.2.0"
+        "jcheng-fake",
+        {"version": "0.1.0", "commit": commit},
+        path,
+        HASH,
+        "0.2.0",
+        "0.1.0",
     )
     assert errors == []
 
@@ -107,3 +112,16 @@ def test_module_checkout_rejects_version_and_hash_mismatch(tmp_path: Path) -> No
     )
     assert any("VERSION at" in error for error in errors)
     assert any("contract_hash" in error for error in errors)
+
+
+def test_module_checkout_rejects_system_api_mismatch(tmp_path: Path) -> None:
+    path, commit = _make_module_repo(tmp_path)
+    errors = _module_checkout_errors(
+        "jcheng-fake",
+        {"version": "0.1.0", "commit": commit},
+        path,
+        HASH,
+        "0.2.0",
+        "0.2.0",
+    )
+    assert any("system_api" in error for error in errors)
