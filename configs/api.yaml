@@ -1,0 +1,8 @@
+schema_version: 1
+# Version of the public system gateway contract (HTTP /v1 and WS /v1/ws/state).
+# Deliberately independent of VERSION and of the interfaces contract hash.
+# Capability manifests declare `contract.system_api` ranges against this value.
+api_version: "0.1.0"
+paths:
+  gateway_http: "/v1"
+  gateway_ws: "/v1/ws/state"

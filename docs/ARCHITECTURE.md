@@ -67,6 +67,20 @@ Mock 网关和只读网关共用同一个升级实现；只读网关发送 telem
 pong，close 结束流，其他客户端数据忽略。没有租约、运动、事件或写入路径。
 两个 HTTP handler 使用 HTTP/1.1（WebSocket 握手要求）。
 
+## 1.4 版本轴与 public API
+
+系统同时携带三条版本轴，不能混用：
+
+| 轴 | 载体 | 当前值 | 用途 |
+|---|---|---|---|
+| 契约 | `configs/contract.yaml` | `jcheng-interfaces` 0.2.0 / `afca22…` | 运行时握手 |
+| 系统 | `VERSION` | `0.3.0-dev0` | 发布与变更历史 |
+| 公共 API | `configs/api.yaml` | `0.1.0` | 能力清单的 `contract.system_api` 范围 |
+
+`api_version` 与系统 `VERSION` 解耦：`/v1` 是 HTTP 路径主版本，`api_version`
+是能力仓库声明兼容范围所用的语义版本。`verify_lock.py --module-root` 会验证
+每个模块 `capability.yaml` 的 `system_api` 范围包含该值。
+
 ## 2. 包职责
 
 | 包 | M3 职责 | M4 状态 |

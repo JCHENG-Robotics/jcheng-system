@@ -108,6 +108,7 @@ def _module_checkout_errors(
     path: Path,
     locked_hash: str,
     locked_version: str,
+    api_version: str | None = None,
 ) -> list[str]:
     """Verify the pinned commit's VERSION and capability.yaml in a local checkout."""
     errors: list[str] = []
@@ -159,6 +160,16 @@ def _module_checkout_errors(
             f"module {name}: declared interfaces {declared_spec!r} "
             f"does not include {locked_version}"
         )
+    declared_api = contract.get("system_api")
+    if (
+        api_version
+        and declared_api is not None
+        and not interfaces_range_contains(str(declared_api), api_version)
+    ):
+        errors.append(
+            f"module {name}: declared system_api {declared_api!r} "
+            f"does not include {api_version}"
+        )
     return errors
 
 
@@ -189,6 +200,15 @@ def verify(
     contract_path = root / "configs" / "contract.yaml"
     contract = yaml.safe_load(contract_path.read_text(encoding="utf-8"))
     interfaces = contract["interfaces"]
+    api_path = root / "configs" / "api.yaml"
+    api_version: str | None = None
+    if api_path.is_file():
+        api = yaml.safe_load(api_path.read_text(encoding="utf-8")) or {}
+        value = str(api.get("api_version", ""))
+        if _parse_version(value) is None:
+            errors.append("configs/api.yaml: api_version is not a dotted version")
+        else:
+            api_version = value
     repo = lock["repos"].get("jcheng-interfaces")
     if not isinstance(repo, dict):
         errors.append("lockfile: jcheng-interfaces pin is missing")
@@ -229,7 +249,12 @@ def verify(
                     continue
                 errors.extend(
                     _module_checkout_errors(
-                        str(name), entry, path, expected["contract_hash"], expected["version"]
+                        str(name),
+                        entry,
+                        path,
+                        expected["contract_hash"],
+                        expected["version"],
+                        api_version,
                     )
                 )
 
