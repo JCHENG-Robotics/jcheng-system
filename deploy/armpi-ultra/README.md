@@ -36,8 +36,12 @@ deploy/armpi-ultra/
 │   └── image.lock      # tag, image id, size, provenance
 ├── systemd/            # base unit files from /etc/systemd/system (captured)
 ├── evidence/20261125/  # pre/post baselines and acceptance record
+├── evidence/20261127-r10/  # live R10 gateway /v1 evidence
+├── install-gateway-vendor.sh   # R10 gateway installer (manual start only)
+├── jcheng-gateway-vendor-run.sh
 ├── docs/
 │   ├── IMAGE-SLIMMING-20261125.md
+│   ├── R10-GATEWAY-20261127.md
 │   └── ACCEPTANCE-20261125.md
 └── capture.sh          # re-capture units + baselines from the robot
 ```
@@ -55,7 +59,11 @@ that `docker exec`s into the container:
 | `armpi-vision.service` | vendor `vision.launch.py` + Aurora930 driver (Type=oneshot) |
 | `armpi-gateway.service` | read-only gateway on 8765 |
 | `armpi-gateway-pose.service` | pose/motion gateway on 8766 (manual start) |
+| `jcheng-gateway-vendor.service` | R10 hardware-backed `/v1` gateway on 8766, loopback, **manual start**, motion gated by token and lease; see `docs/R10-GATEWAY-20261127.md` |
 | `armpi-ext-cam.service` | retired UVC path, **disabled** |
+
+The legacy `armpi-gateway-pose` and R10 both use 8766. Mask/stop the legacy
+unit before starting R10; the installer refuses while it is active.
 
 Consequences:
 

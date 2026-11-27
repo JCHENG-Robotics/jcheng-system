@@ -8,6 +8,14 @@ All notable changes to this project are documented here. Format based on
 
 ### Added
 
+- R10 hardware gateway deployment: `deploy/armpi-ultra` gains a
+  `jcheng-gateway-vendor.service` unit, run script and installer for the
+  hardware-backed `/v1` gateway on loopback 8766. The vendor gateway startup
+  now defers the first bus read until the executor spins, so it no longer
+  deadlocks in `__init__`. The unit is manual-start only, starts `DISARMED`
+  and needs a lease; it is never enabled at boot.
+  `docs/R10-GATEWAY-20261127.md`; live `/v1` evidence in
+  `deploy/armpi-ultra/evidence/20261127-r10/`. No motion command was sent.
 - M6 streaming runtime: `jcheng_runtime` accepts `streaming:=true` and builds
   `TeleopIntake(streaming=True, step_period_s=0.05)`. The 20 Hz timer opens one
   arbiter session, publishes frames with `stream` and closes on the neutral

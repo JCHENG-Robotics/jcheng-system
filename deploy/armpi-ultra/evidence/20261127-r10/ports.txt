@@ -1,0 +1,4 @@
+8766/tcp loopback (R10 hardware gateway)
+8767/tcp loopback (read-only telemetry gateway)
+8765/tcp LAN (legacy read-only gateway)
+8766 legacy pose gateway: masked on 2026-11-27

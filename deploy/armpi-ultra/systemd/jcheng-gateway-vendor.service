@@ -1,0 +1,18 @@
+[Unit]
+Description=JCHENG R10 vendor gateway (8766, motion gated by token and lease)
+Documentation=file:/usr/local/lib/jcheng-system/jcheng-gateway-vendor-run.sh
+Requires=docker.service
+After=docker.service network-online.target start_node.service
+ConditionPathExists=/etc/jcheng-system/vendor.env
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/jcheng-system/vendor.env
+ExecStart=/usr/local/lib/jcheng-system/jcheng-gateway-vendor-run.sh
+ExecStop=/usr/bin/docker exec -u ubuntu ArmPiUltra pkill -f "[j]cheng_gateway_vendor|[g]ateway_vendor.launch.py"
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=15
+
+[Install]
+WantedBy=multi-user.target
