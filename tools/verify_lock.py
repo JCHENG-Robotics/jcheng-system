@@ -7,16 +7,159 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import re
 import subprocess
 import sys
 
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
+COMMIT_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 
 
 def sha256(path: Path) -> str:
     return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _parse_version(text: str) -> tuple[int, ...] | None:
+    parts = text.strip().split(".")
+    if not 2 <= len(parts) <= 4:
+        return None
+    try:
+        return tuple(int(part) for part in parts)
+    except ValueError:
+        return None
+
+
+def _padded(value: tuple[int, ...], length: int) -> tuple[int, ...]:
+    return value + (0,) * (length - len(value))
+
+
+def interfaces_range_contains(spec: str, version: str) -> bool:
+    """Return True when a range such as ``>=0.2,<0.3`` contains ``version``."""
+    target = _parse_version(version)
+    if target is None:
+        return False
+    clauses = [clause.strip() for clause in spec.split(",") if clause.strip()]
+    if not clauses:
+        return False
+    for clause in clauses:
+        for operator in (">=", "<=", "==", ">", "<"):
+            if not clause.startswith(operator):
+                continue
+            boundary = _parse_version(clause[len(operator):])
+            if boundary is None:
+                return False
+            width = max(len(target), len(boundary))
+            left, right = _padded(target, width), _padded(boundary, width)
+            if operator == ">=" and not left >= right:
+                return False
+            if operator == ">" and not left > right:
+                return False
+            if operator == "<=" and not left <= right:
+                return False
+            if operator == "<" and not left < right:
+                return False
+            if operator == "==" and not left == right:
+                return False
+            break
+        else:
+            return False
+    return True
+
+
+def _module_entry_errors(name: str, entry: object, locked_version: str) -> list[str]:
+    if name in ("jcheng-interfaces", "jcheng-system"):
+        return [f"module {name}: L0/L1/L2 repositories belong in repos, not modules"]
+    if not isinstance(entry, dict):
+        return [f"module {name}: entry must be a mapping"]
+    errors: list[str] = []
+    commit = str(entry.get("commit", ""))
+    if not COMMIT_PATTERN.match(commit):
+        errors.append(f"module {name}: commit must be a full 40-hex SHA")
+    version = str(entry.get("version", ""))
+    if _parse_version(version) is None:
+        errors.append(f"module {name}: version {version!r} is not a dotted version")
+    spec = str(entry.get("interfaces", ""))
+    if not interfaces_range_contains(spec, locked_version):
+        errors.append(
+            f"module {name}: interfaces {spec!r} does not include {locked_version}"
+        )
+    return errors
+
+
+def _git_show(path: Path, commit: str, relative: str) -> str | None:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(path), "show", f"{commit}:{relative}"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return result.stdout if result.returncode == 0 else None
+
+
+def _module_checkout_errors(
+    name: str,
+    entry: dict,
+    path: Path,
+    locked_hash: str,
+    locked_version: str,
+) -> list[str]:
+    """Verify the pinned commit's VERSION and capability.yaml in a local checkout."""
+    errors: list[str] = []
+    commit = str(entry["commit"])
+    try:
+        exists = subprocess.run(
+            ["git", "-C", str(path), "cat-file", "-e", f"{commit}^{{commit}}"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return [f"module {name}: cannot inspect {path}: {exc}"]
+    if exists.returncode != 0:
+        return [f"module {name}: commit {commit} is not present in {path}"]
+
+    version = _git_show(path, commit, "VERSION")
+    if version is None:
+        errors.append(f"module {name}: VERSION missing at {commit}")
+    elif version.strip() != str(entry["version"]):
+        errors.append(
+            f"module {name}: VERSION at {commit} is {version.strip()!r}, "
+            f"lock says {entry['version']!r}"
+        )
+
+    capability = _git_show(path, commit, "capability.yaml")
+    if capability is None:
+        errors.append(f"module {name}: capability.yaml missing at {commit}")
+        return errors
+    try:
+        manifest = yaml.safe_load(capability) or {}
+    except yaml.YAMLError as exc:
+        errors.append(f"module {name}: capability.yaml is invalid at {commit}: {exc}")
+        return errors
+    contract = manifest.get("contract") if isinstance(manifest, dict) else None
+    if not isinstance(contract, dict):
+        return errors
+    declared_hash = contract.get("contract_hash")
+    if declared_hash is not None and str(declared_hash) != locked_hash:
+        errors.append(
+            f"module {name}: contract_hash {declared_hash} != lock {locked_hash}"
+        )
+    declared_spec = contract.get("interfaces")
+    if declared_spec is not None and not interfaces_range_contains(
+        str(declared_spec), locked_version
+    ):
+        errors.append(
+            f"module {name}: declared interfaces {declared_spec!r} "
+            f"does not include {locked_version}"
+        )
+    return errors
 
 
 def verify(
@@ -25,6 +168,7 @@ def verify(
     remote: bool = False,
     require_evidence: bool = False,
     interfaces_root: str | Path | None = None,
+    module_root: str | Path | None = None,
 ) -> list[str]:
     root = Path(root)
     errors: list[str] = []
@@ -65,6 +209,29 @@ def verify(
         errors.append(
             f"lockfile: profile hash expected {lock['robot'].get('profile_sha256')}, got {profile_hash}"
         )
+
+    modules = lock.get("modules")
+    if not isinstance(modules, dict):
+        errors.append("lockfile: modules must be a mapping")
+    else:
+        for name, entry in modules.items():
+            errors.extend(_module_entry_errors(str(name), entry, expected["version"]))
+        if module_root:
+            module_root_path = Path(module_root)
+            for name, entry in modules.items():
+                path = module_root_path / str(name)
+                if not path.is_dir():
+                    errors.append(f"module {name}: checkout missing at {path}")
+                    continue
+                if not isinstance(entry, dict):
+                    continue
+                if not COMMIT_PATTERN.match(str(entry.get("commit", ""))):
+                    continue
+                errors.extend(
+                    _module_checkout_errors(
+                        str(name), entry, path, expected["contract_hash"], expected["version"]
+                    )
+                )
 
     if interfaces_root:
         manifest_path = Path(interfaces_root) / "interface_manifest.json"
@@ -122,12 +289,18 @@ def main() -> int:
     parser.add_argument("--remote", action="store_true")
     parser.add_argument("--require-evidence", action="store_true")
     parser.add_argument("--interfaces-root", default=None)
+    parser.add_argument(
+        "--module-root",
+        default=None,
+        help="workspace root with one checkout per locked module (e.g. the parent of the jcheng-* repos)",
+    )
     args = parser.parse_args()
     errors = verify(
         args.root,
         remote=args.remote,
         require_evidence=args.require_evidence,
         interfaces_root=args.interfaces_root,
+        module_root=args.module_root,
     )
     if errors:
         print("LOCK CHECK FAILED", file=sys.stderr)
