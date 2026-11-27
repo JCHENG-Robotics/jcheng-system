@@ -36,7 +36,7 @@ Fault paths:
 `python3 -m pytest -q tests/test_streaming_mock.py` — **5 passed**.
 `tests/test_stream_pack.py` — **10 passed** (atomic pulse packing: exact arm
 coverage, mapping order, rad→pulse, missing/extra/non-finite/out-of-range and
-duration bounds). Full core suite: **68 passed**; ROS suite: 15 passed
+duration bounds). Full core suite: **73 passed**; ROS suite: 15 passed
 (1 skipped); gate OK.
 
 ## Vendor pack path
@@ -46,6 +46,22 @@ duration bounds). Full core suite: **68 passed**; ROS suite: 15 passed
 pulses in mapping order and published in **one** `ServosPosition` frame
 (duration 0.02–0.5 s). No lease/deadman check is done in the bridge; that stays
 in the system supervisor/arbiter.
+
+## Arbiter streaming session
+
+`MotionArbiter.stream(command)` publishes additional frames into a session
+opened by `start` and closed by `finish`/`stop`:
+
+- every frame re-validates lease, stop latch, limits and rate;
+- a rejected frame aborts the session with its terminal result;
+- lease loss latches (stream aborts `LEASE_REVOKED`);
+- a stop-latched session accepts no further frame;
+- `finish` bus-reads and completes once; frames are not terminal results.
+
+`tests/test_streaming_arbiter.py` — **5 passed**: six-frame session then
+COMPLETED with bus verification; lease revoke aborts and latches; stop prevents
+frames; an out-of-limit frame aborts `JOINT_LIMIT`; no active session is
+`MOTION_BUSY`.
 
 ## Limits
 

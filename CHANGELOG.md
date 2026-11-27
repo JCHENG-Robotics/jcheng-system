@@ -8,6 +8,12 @@ All notable changes to this project are documented here. Format based on
 
 ### Added
 
+- M6 arbiter streaming session: `MotionArbiter.stream(command)` publishes
+  further frames into a session opened by `start` and closed by
+  `finish`/`stop`; every frame re-validates lease/stop/limits/rate, a rejected
+  frame aborts terminally, lease loss latches. `tests/test_streaming_arbiter.py`
+  (5 tests: frames→COMPLETED, lease revoke, stop, JOINT_LIMIT, no session).
+  Mock only; runtime/vendor supervisor not wired.
 - M6 atomic stream packing: `jcheng_hardware/streaming.py`
   (`pack_arm_stream`) converts every arm joint to a pulse in mapping order and
   rejects partial/extra/non-finite/out-of-range frames and durations outside
