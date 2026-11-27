@@ -33,14 +33,25 @@ Fault paths:
 
 ## Tests
 
-`python3 -m pytest -q tests/test_streaming_mock.py` — **5 passed**. Full core
-suite: **58 passed**; ROS suite: 16 passed (2 skipped); gate OK.
+`python3 -m pytest -q tests/test_streaming_mock.py` — **5 passed**.
+`tests/test_stream_pack.py` — **10 passed** (atomic pulse packing: exact arm
+coverage, mapping order, rad→pulse, missing/extra/non-finite/out-of-range and
+duration bounds). Full core suite: **68 passed**; ROS suite: 15 passed
+(1 skipped); gate OK.
+
+## Vendor pack path
+
+`jcheng_hardware/streaming.py` (`pack_arm_stream`) and
+`VendorBridge.send_stream` are implemented: all arm joints are converted to
+pulses in mapping order and published in **one** `ServosPosition` frame
+(duration 0.02–0.5 s). No lease/deadman check is done in the bridge; that stays
+in the system supervisor/arbiter.
 
 ## Limits
 
-- Mock only. The real vendor path (`ServosPosition` on the vendor topic) still
-  needs a `send_stream` on `VendorBridge` and a supervisor loop that publishes
-  at the command period, then a bus read.
+- Mock and pure packing only. The vendor `send_stream` path is not exercised
+  against the vendor stack; a supervisor that publishes at the command period
+  and performs a bus read is still missing.
 - Vendor rate/interpolation remain unmeasured; a write session needs separate
   per-session authorization.
 - The mock applies targets immediately; it does not model servo lag.

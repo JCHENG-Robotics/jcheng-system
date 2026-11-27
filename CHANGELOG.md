@@ -8,6 +8,12 @@ All notable changes to this project are documented here. Format based on
 
 ### Added
 
+- M6 atomic stream packing: `jcheng_hardware/streaming.py`
+  (`pack_arm_stream`) converts every arm joint to a pulse in mapping order and
+  rejects partial/extra/non-finite/out-of-range frames and durations outside
+  0.02–0.5 s; `VendorBridge.send_stream` publishes that frame in one
+  `ServosPosition` message. `tests/test_stream_pack.py` (10 tests). The
+  supervisor loop and vendor-stack exercise remain.
 - M6 mock streaming bridge: `jcheng_system_core/streaming.py`
   (`MockStreamingBridge`) records one atomic multi-joint `StreamingFrame` per
   `JOINT_STEP`/`HOME`, with tests for the full-joint frame, deadman release,

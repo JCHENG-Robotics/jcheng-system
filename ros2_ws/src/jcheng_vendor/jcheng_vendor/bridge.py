@@ -18,6 +18,7 @@ from ros_robot_controller_msgs.srv import GetBusServoState
 from servo_controller_msgs.msg import ServoPosition, ServosPosition
 
 from jcheng_hardware.readonly import ReadOnlyMapping, validate_pulse
+from jcheng_hardware.streaming import pack_arm_stream
 from jcheng_system_core.models import RobotState
 from jcheng_system_core.timebase import Clock
 
@@ -173,6 +174,19 @@ class VendorBridge:
         pulse = self._pulse_for(joint.name, target_rad)
         self._publish([(joint.servo_id, pulse)], duration_s)
         return pulse
+
+    def send_stream(self, targets: dict[str, float], duration_s: float) -> dict[str, int]:
+        """Publish all arm joints in one packet (M6 streaming frame).
+
+        The caller must already hold a lease and have checked the deadman; this
+        method only packs and publishes. It returns the pulse per joint.
+        """
+        packed = pack_arm_stream(self.mapping, targets, duration_s)
+        self._publish(
+            [(entry.servo_id, entry.pulse) for entry in packed.entries],
+            packed.duration_s,
+        )
+        return packed.pulses()
 
     def hold(self) -> None:
         """Hold all joints at the latest measured pulses."""
