@@ -116,6 +116,69 @@ def test_stop_latch_prevents_further_frames(root) -> None:
     assert stack.safety.stop_latched is True
 
 
+def test_streaming_intake_opens_one_session_and_finishes_on_release(root) -> None:
+    stack, bridge, clock = _stack(root)
+    lease = _lease(stack)
+    intake = TeleopIntake(
+        stack, step_period_s=0.05, max_velocity_rad_s=MAX_VELOCITY, streaming=True
+    )
+    for seq in range(1, 11):
+        now = round((seq - 1) * 0.051, 6)
+        clock.advance(now - clock.now())
+        stack.sync_state()
+        intake.on_sample(_sample(stack, lease.lease_id, seq=seq, received_s=now), now=now)
+        assert intake.tick(now) is None
+    assert len(bridge.frames) == 10
+    assert stack.arbiter._active is not None
+    frames = len(bridge.frames)
+    intake.on_sample(
+        _sample(stack, lease.lease_id, seq=11, received_s=0.6, deadman=False), now=0.6
+    )
+    assert intake.active is False
+    assert stack.arbiter._active is None
+    assert len(bridge.frames) == frames
+    assert stack.safety.stop_latched is False
+
+
+def test_streaming_intake_stop_latches_without_further_frames(root) -> None:
+    stack, bridge, clock = _stack(root)
+    lease = _lease(stack)
+    intake = TeleopIntake(stack, step_period_s=0.05, streaming=True)
+    for seq in range(1, 4):
+        now = round((seq - 1) * 0.051, 6)
+        clock.advance(now - clock.now())
+        stack.sync_state()
+        intake.on_sample(_sample(stack, lease.lease_id, seq=seq, received_s=now), now=now)
+        assert intake.tick(now) is None
+    frames = len(bridge.frames)
+    intake.stop("operator stop", now=0.3)
+    assert stack.safety.stop_latched is True
+    assert stack.arbiter._active is None or stack.arbiter._active.terminal is not None
+    assert len(bridge.frames) == frames
+
+
+def test_streaming_intake_lease_loss_aborts_the_session(root) -> None:
+    stack, bridge, clock = _stack(root)
+    lease = _lease(stack)
+    intake = TeleopIntake(stack, step_period_s=0.05, streaming=True)
+    for seq in range(1, 4):
+        now = round((seq - 1) * 0.051, 6)
+        clock.advance(now - clock.now())
+        stack.sync_state()
+        intake.on_sample(_sample(stack, lease.lease_id, seq=seq, received_s=now), now=now)
+        assert intake.tick(now) is None
+    frames = len(bridge.frames)
+    stack.authority.revoke(lease.lease_id, "test", "lease lost", stack.version)
+    now = round(3 * 0.051, 6)
+    clock.advance(now - clock.now())
+    stack.sync_state()
+    result = intake.tick(now)
+    assert result is not None and result.outcome == "ABORTED"
+    assert intake.active is False
+    assert stack.safety.stop_latched is True
+    assert len(bridge.frames) == frames
+
+
 def test_single_joint_step_is_not_logged_as_a_stream_frame(root) -> None:
     stack, bridge, _clock = _stack(root)
     lease = _lease(stack)

@@ -36,7 +36,7 @@ Fault paths:
 `python3 -m pytest -q tests/test_streaming_mock.py` — **5 passed**.
 `tests/test_stream_pack.py` — **10 passed** (atomic pulse packing: exact arm
 coverage, mapping order, rad→pulse, missing/extra/non-finite/out-of-range and
-duration bounds). Full core suite: **73 passed**; ROS suite: 15 passed
+duration bounds). Full core suite: **76 passed**; ROS suite: 15 passed
 (1 skipped); gate OK.
 
 ## Vendor pack path
@@ -62,6 +62,18 @@ opened by `start` and closed by `finish`/`stop`:
 COMPLETED with bus verification; lease revoke aborts and latches; stop prevents
 frames; an out-of-limit frame aborts `JOINT_LIMIT`; no active session is
 `MOTION_BUSY`.
+
+## Streaming intake
+
+`TeleopIntake(streaming=True)` opens one arbiter session on the first frame
+(`start`), publishes later frames with `stream`, and closes it on deadman
+release/timeout (`finish`) or an explicit stop (`arbiter.stop`, latched). At a
+20 Hz cadence the test gets 10 atomic frames; a deadman release then clears the
+session without latching. A lease revoke mid-stream aborts `ABORTED` and
+latches; an explicit stop latches with no further frame.
+
+`tests/test_streaming_mock.py` — **8 passed** (the original five plus three
+streaming-intake cases).
 
 ## Limits
 

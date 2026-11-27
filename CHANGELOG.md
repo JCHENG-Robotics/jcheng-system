@@ -8,6 +8,11 @@ All notable changes to this project are documented here. Format based on
 
 ### Added
 
+- M6 streaming intake: `TeleopIntake(streaming=True)` opens one arbiter
+  session (`start`), publishes frames with `stream`, and closes on
+  deadman/timeout (`finish`) or explicit stop (latched). 20 Hz test: 10 atomic
+  frames, release clears without latching, lease revoke aborts/latches.
+  `tests/test_streaming_mock.py` (8 tests). Not wired into the ROS runtime.
 - M6 arbiter streaming session: `MotionArbiter.stream(command)` publishes
   further frames into a session opened by `start` and closed by
   `finish`/`stop`; every frame re-validates lease/stop/limits/rate, a rejected
@@ -26,8 +31,8 @@ All notable changes to this project are documented here. Format based on
   lease revoke, stop latch and a single-joint step that is not a stream.
   `TeleopIntake.last_tick_s` now anchors on the actual tick time instead of
   adding the period (drift/skip found by the cadence test). Evidence:
-  `e2e/reports/20261127_streaming_mock/`. Mock only; the vendor `send_stream`
-  and a bus-read supervisor are not implemented.
+  `e2e/reports/20261127_streaming_mock/`. Mock only; a runtime supervisor is
+  not wired and no vendor write has been made.
 - R10: `jcheng_vendor/gateway_node.py` and
   `jcheng_bringup/launch/gateway_vendor.launch.py`: a ROS process that owns the
   vendor bridge, requires `enable_motion:=true` and a token, performs an
