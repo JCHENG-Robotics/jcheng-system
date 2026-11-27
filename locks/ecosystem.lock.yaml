@@ -1,7 +1,7 @@
 schema_version: 1
-release: "2026.11.0-m3"
+release: "2026.11.1"
 channel: dev
-created_at: "2026-11-23T00:00:00Z"
+created_at: "2026-11-27T05:00:00Z"
 toolchain:
   ros_distro: humble
   ros_image: "ros:humble-ros-base@sha256:dfc94c85d8e01f230951b2a85ca5576e08473081c3da5fbbe8f3ab844703b9ba"
@@ -15,7 +15,19 @@ repos:
     tag: "v0.2.0"
     commit: "b03a054a59f70c24741fce37ebe1bb03978d9021"
     contract_hash: "sha256:afca22a42f7163e0351d185d5a8577b0b51f2f3da4b92278f161a4a7d2c35b1c"
-modules: {}
+modules:
+  jcheng-applications:
+    version: "0.1.0"
+    commit: "0bd57de1b21b9f16c4230dca147e493be4a5c2b8"
+    interfaces: ">=0.2,<0.3"
+  jcheng-studio:
+    version: "0.7.0"
+    commit: "1eade61f467cda6c8a218a803033b489ae9792cc"
+    interfaces: ">=0.2,<0.3"
+  jcheng-teleop:
+    version: "0.3.0"
+    commit: "eca822399f03c5ca6228306ffc931d764e766941"
+    interfaces: ">=0.2,<0.3"
 robot:
   name: armpi_ultra
   profile_version: "1.0.0"
