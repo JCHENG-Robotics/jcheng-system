@@ -45,8 +45,8 @@ All notable changes to this project are documented here. Format based on
   `StopResponse` carries them. A mock stop that completes an active session as
   `ABORTED` is `backend_confirmed`; an idle stop, or the vendor executor's
   stop-before-terminal path, is `request_accepted`. `physical_stop` is always
-  `unverified`. The system contract pin and lock remain v0.1.0 until the
-  interfaces `v0.2.0` tag exists. Tests: `tests/test_stop_confirmation.py`,
+  `unverified`. The system contract pin and lock now pin the signed interfaces
+  `v0.2.0` tag and hash. Tests: `tests/test_stop_confirmation.py`,
   `tests/test_vendor_executor_c2p.py`.
 - R10: `jcheng_vendor/gateway_node.py` and
   `jcheng_bringup/launch/gateway_vendor.launch.py`: a ROS process that owns the

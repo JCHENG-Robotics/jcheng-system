@@ -56,8 +56,8 @@ HTTP client
   `jcheng_hardware`.
 - Completion comes from a bus read, not from the command cache; a bus failure
   latches `UNKNOWN`.
-- The contract hash is pinned to interfaces v0.1.0:
-  `sha256:0b8d72ced7f54d444d6851d8b99a51a78e2bed3f687324f51a15f76557f24b42`.
+- The contract hash is pinned to interfaces v0.2.0:
+  `sha256:afca22a42f7163e0351d185d5a8577b0b51f2f3da4b92278f161a4a7d2c35b1c`.
 
 ### 2.1 M4 read-only chain
 
