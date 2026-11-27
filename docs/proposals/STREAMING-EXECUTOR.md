@@ -38,10 +38,11 @@ Choose one:
 3. **Declare M6 hardware blocked on the vendor stack** and keep M6 at offline
    prerequisites until the vendor provides a stream.
 
-Recommendation: run a **read-only capability probe** first (option 1 discovery).
-If the vendor SDK cannot stream a joint vector, record that as a failed bound
-and take option 3. Do not emulate streaming by a rapid series of single-joint
-steps; the intermediate poses are real robot motion.
+Recommendation: the read-only probe (2026-11-27) found a vendor multi-servo
+vector write, so pursue **option 1** with a mock-first bridge; rate and
+interpolation still need an authorized write session. Do not emulate streaming
+by a rapid series of single-joint steps; the intermediate poses are real robot
+motion.
 
 ## 3. Required properties (any option)
 
@@ -82,18 +83,33 @@ payload that the intake would map into `JOINT_STREAM`.
 
 ## 5. Read-only capability probe (first task, no motion)
 
-Before any code:
+**Result (2026-11-27): a multi-servo vector write exists in the vendor stack.**
+The probe read files inside the running `ArmPiUltra` container only; no ROS
+command, no `/dev/rrc` write, no servo enable and no motion.
 
-1. Enumerate the vendor servo/stream API surface in `~/ArmPiUltra/` (read-only)
-   and the vendor container's service list.
-2. Determine whether a joint vector can be written atomically, the maximum
-   update rate, and whether the firmware interpolates between targets.
-3. Record the result as a source record under `jcheng-research/references/`;
-   a negative result is a valid outcome.
-4. Only then decide option 1 vs option 3.
+- The vendor node subscribes `~/bus_servo/set_position` (`ServosPosition`).
+- `ServosPosition` = `float64 duration` + `ServoPosition[]` (`uint16 id`,
+  `uint16 position` pulses).
+- `bus_servo_set_position(duration, positions)` packs every id/position into one
+  packet (`duration` in ms) over `/dev/rrc` at 1 Mbps.
+- No completion acknowledgement; truth still comes from `GetBusServoState`.
+- The **JCHENG** executor's single-joint limit is in `jcheng_vendor/executor.py`
+  (`send_step` per joint + settle), not in the vendor board.
 
-The probe is read-only: no servo write, no enable, no motion. It requires
-separate operator authorization for any subsequent write session.
+This makes option 1 plausible without new firmware. It is **not proven** until
+an authorized write session measures the sustainable rate and whether the servo
+interpolates between duration targets. The probe itself is read-only.
+
+Evidence:
+[`e2e/reports/20261127_streaming_probe/`](../../e2e/reports/20261127_streaming_probe/README.md).
+
+Next step: a mock-first `StreamingBridge` design that packs all joints into one
+`ServosPosition` call with a duration matching the command period, verifies via
+a bus read, and stays behind the arbiter. Then, only with separate per-session
+authorization, a supervised low-speed write session measures rate/tracking.
+
+The probe requires no writes; any subsequent write session requires separate
+operator authorization.
 
 ## 6. Test plan (mock first)
 
