@@ -58,8 +58,9 @@ the chosen path. R9 composes the M5.2 executor behind the HTTP `GatewayApp`
 (`VendorStack`, `mode="hardware"`) and proves `/v1/motion/execute` offline. R10
 adds the ROS gateway node and launch (token + `enable_motion` gate, initial bus
 read, 0.25 s poll, HTTP + tick); the Humble build with real vendor message
-definitions passed (16 packages, tests, M5.2 gate), but it has not been launched
-against the live vendor stack or hardware. A hardware C1–C5 session remains; if
+definitions passed (16 packages, tests, M5.2 gate) and a fake-vendor ROS graph
+test exercised `/v1` arm/lease/execute/stop, but it has not been launched
+against the real vendor stack or hardware. A hardware C1–C5 session remains; if
 the deployed legacy gateway is ever used, it needs the atomic dispatch fix and
 C1–C5 as well.
 

@@ -1,0 +1,14 @@
+.....................................................                    [100%]
+=============================== warnings summary ===============================
+../../usr/lib/python3/dist-packages/_pytest/config/__init__.py:1233
+  Warning: Unknown config option: pythonpath
+
+-- Docs: https://docs.pytest.org/en/stable/warnings.html
+................                                                         [100%]
+=============================== warnings summary ===============================
+../../usr/lib/python3/dist-packages/_pytest/config/__init__.py:1233
+  Warning: Unknown config option: pythonpath
+
+-- Docs: https://docs.pytest.org/en/stable/warnings.html
+M5.2 publisher/client gate OK: publishers=['SafetyState', 'ServosPosition'] clients=['GetBusServoState']
+M5.2 gate OK: single /servo_controller path, read-only bus service, no raw bus/device

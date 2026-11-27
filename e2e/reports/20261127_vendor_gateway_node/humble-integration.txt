@@ -1,0 +1,14 @@
+============================= test session starts ==============================
+platform linux -- Python 3.10.12, pytest-6.2.5, py-1.10.0, pluggy-0.13.0
+rootdir: /tmp/repo, configfile: pytest.ini
+plugins: launch-testing-ros-0.19.12, launch-testing-1.0.10, ament-lint-0.12.14, ament-xmllint-0.12.14, ament-flake8-0.12.15, ament-copyright-0.12.15, ament-pep257-0.12.15, colcon-core-0.20.0
+collected 1 item
+
+tests_ros/test_gateway_vendor_integration.py .                           [100%]
+
+=============================== warnings summary ===============================
+../../usr/lib/python3/dist-packages/_pytest/config/__init__.py:1233
+  Warning: Unknown config option: pythonpath
+
+-- Docs: https://docs.pytest.org/en/stable/warnings.html
+========================= 1 passed, 1 warning in 2.16s =========================
