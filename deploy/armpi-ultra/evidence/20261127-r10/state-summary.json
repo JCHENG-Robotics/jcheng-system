@@ -1,0 +1,8 @@
+{
+  "fresh": true,
+  "truth": "measured",
+  "verification": "bus",
+  "joint_count": 5,
+  "battery_voltage": 0.0,
+  "profile_hash": "sha256:2098e5e5ece44bca0fd347a6c8a31e536b3cf9d5ff2352ac648290589d1c32ba"
+}
