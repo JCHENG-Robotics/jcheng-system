@@ -15,7 +15,11 @@ All notable changes to this project are documented here. Format based on
   `GatewayApp` over HTTP, runs `arbiter.tick`, and routes `/safety_stop` to the
   executor stop. Humble build with the real vendor message definitions passed
   (16 packages, `pytest`, `tests_ros`, M5.2 gate); launch against the live
-  vendor stack and hardware C1–C5 remain.
+  vendor stack and hardware C1–C5 remain. A 2026-11-27 read-only precheck found
+  8765 reachable but 8766 closed, motion telemetry missing, and the `pi` SSH
+  restricted to time sync, so R10 was not deployed; no motion was sent and the
+  vendor container was not restarted. Evidence:
+  `e2e/reports/20261127_robot_precheck/`.
 - R9: `jcheng_vendor.gateway_stack.VendorStack` composes the M5.2
   `HardwareExecutor` with the HTTP `GatewayApp`; `VendorGatewayHardware`
   adapts the read surface, and `mode="hardware"` / `capabilities=("hardware",)`

@@ -1,0 +1,1 @@
+{"available": false, "voltage_mv": null, "voltage_v": null, "percent_estimate": null, "cell_count": 2, "status": "unavailable", "truth": "unknown", "validity": "unavailable", "source": "armpi_debug_gateway", "topic": "/ros_robot_controller/battery", "received_at": null, "sample_age_ms": null, "notes": ["No battery message received yet."]}

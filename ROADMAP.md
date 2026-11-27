@@ -59,9 +59,12 @@ the chosen path. R9 composes the M5.2 executor behind the HTTP `GatewayApp`
 adds the ROS gateway node and launch (token + `enable_motion` gate, initial bus
 read, 0.25 s poll, HTTP + tick); the Humble build with real vendor message
 definitions passed (16 packages, tests, M5.2 gate), but it has not been launched
-against the live vendor stack or hardware. A hardware C1–C5 session remains; if
-the deployed legacy gateway is ever used, it needs the atomic dispatch fix and
-C1–C5 as well.
+against the live vendor stack or hardware. A 2026-11-27 read-only precheck
+found the robot reachable on 8765 (aux camera/TF) but 8766 closed, no
+battery/joint/measured telemetry, and the `pi` SSH restricted to time sync
+(no shell/SFTP), so R10 could not be deployed. A hardware C1–C5 session
+remains; if the deployed legacy gateway is ever used, it needs the atomic
+dispatch fix and C1–C5 as well.
 
 ## Milestones
 
