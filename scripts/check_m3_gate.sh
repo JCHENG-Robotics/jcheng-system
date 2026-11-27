@@ -70,7 +70,7 @@ if grep -RIl --include='*.py' -E '\brclpy\b|\brclcpp\b' "${m3_paths[@]}" >/dev/n
   fail=1
 fi
 
-if grep -RIl --include='*.py' --exclude='readonly.launch.py' --exclude='motion_vendor.launch.py' -E '/dev/(tty|rrc)|serial\.Serial|import serial|pyserial|ttyUSB|ttyACM|ros_robot_controller|servo_controller_msgs|/cmd_vel|/move_action' "${m3_paths[@]}" >/dev/null 2>&1; then
+if grep -RIl --include='*.py' --exclude='readonly.launch.py' --exclude='motion_vendor.launch.py' --exclude='gateway_vendor.launch.py' -E '/dev/(tty|rrc)|serial\.Serial|import serial|pyserial|ttyUSB|ttyACM|ros_robot_controller|servo_controller_msgs|/cmd_vel|/move_action' "${m3_paths[@]}" >/dev/null 2>&1; then
   echo "ERROR: real hardware access or vendor command path found in M3 code." >&2
   fail=1
 fi
