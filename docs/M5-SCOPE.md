@@ -80,9 +80,10 @@ ROS 进程 `jcheng_vendor/gateway_node.py`（R10，2026-11-27）实现：
 - launch：`jcheng_bringup/launch/gateway_vendor.launch.py`，token 只从环境
   读取，host 默认回环，motion 默认关闭。
 
-节点已通过语法编译检查与离线组合测试；证据
-`e2e/reports/20261127_vendor_gateway_node/`。尚未在 Humble 构建、尚未对厂商栈
-运行。实机 C1–C5 仍需单独授权。
+节点已通过语法编译检查、离线组合测试，以及带真实厂商消息定义的 Humble
+构建（16 包，`pytest`/`tests_ros`/M5.2 gate 通过）；证据
+`e2e/reports/20261127_vendor_gateway_node/`。尚未对运行中的厂商栈启动，实机
+C1–C5 仍需单独授权。
 
 ## 2. 服务/action 名称（M5.1）
 

@@ -1,0 +1,2 @@
+py_compile ros2_ws/src/jcheng_vendor/jcheng_vendor/gateway_node.py ros2_ws/src/jcheng_bringup/launch/gateway_vendor.launch.py
+exit=0 (no output)

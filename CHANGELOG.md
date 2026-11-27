@@ -13,7 +13,9 @@ All notable changes to this project are documented here. Format based on
   vendor bridge, requires `enable_motion:=true` and a token, performs an
   initial bus read before serving, polls the bus at about 0.25 s, serves
   `GatewayApp` over HTTP, runs `arbiter.tick`, and routes `/safety_stop` to the
-  executor stop. Compile-checked; Humble build and hardware C1–C5 pending.
+  executor stop. Humble build with the real vendor message definitions passed
+  (16 packages, `pytest`, `tests_ros`, M5.2 gate); launch against the live
+  vendor stack and hardware C1–C5 remain.
 - R9: `jcheng_vendor.gateway_stack.VendorStack` composes the M5.2
   `HardwareExecutor` with the HTTP `GatewayApp`; `VendorGatewayHardware`
   adapts the read surface, and `mode="hardware"` / `capabilities=("hardware",)`

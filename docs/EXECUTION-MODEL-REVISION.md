@@ -283,9 +283,11 @@ polls the bus (the vendor runtime uses 0.25 s), serves `GatewayServer` and runs
 - launch: `jcheng_bringup/launch/gateway_vendor.launch.py` (token from the
   environment, host default loopback, motion disabled by default).
 
-The node is compile-checked and its composition is covered offline; it has
-**not** been built in Humble or run against the vendor stack in this session.
-A Humble build and a hardware C1–C5 session remain.
+The node is compile-checked and its composition is covered offline. A
+disposable Humble build with the real vendor message definitions (mounted
+read-only) passed on 2026-11-27: 16 packages, `pytest`, `tests_ros` and the
+M5.2 gate. It has **not** been launched against a live vendor stack, and a
+hardware C1–C5 session remains.
 
 ## 3. Stop confirmation levels
 
@@ -329,7 +331,7 @@ without the harness delay (finding F5). Proposed:
 | R7 | Deployed `armpi_debug_gateway` dispatch/stop ordering | Offline probe; legacy gateway only | **Finding filed** 2026-11-26: stop lost between `validate` and `start`; not the chosen target, not fixed |
 | R8 | M5.2 `HardwareExecutor` send/stop ordering | C2p offline: no send after an accepted stop | **Done** (offline, 2026-11-26): send and stop share `_active_lock`; `tests/test_vendor_executor_c2p.py`; `e2e/reports/20261126_vendor_executor_c2p/` |
 | R9 | Hardware-backed HTTP gateway composition | `/v1/execute` reaches `HardwareExecutor`; health advertises `hardware` | **Composition done offline** 2026-11-26 (`VendorStack` + fake bridge); ROS node/launch and hardware C1–C5 pending |
-| R10 | ROS hardware gateway node | Token + `enable_motion` gate; initial bus read; 0.25 s poll; HTTP + tick | **Implemented, compile-checked** 2026-11-27; `e2e/reports/20261127_vendor_gateway_node/`; Humble build and hardware C1–C5 pending |
+| R10 | ROS hardware gateway node | Token + `enable_motion` gate; initial bus read; 0.25 s poll; HTTP + tick | **Implemented; Humble build passed** 2026-11-27 (16 packages, tests/tests_ros/gate); `e2e/reports/20261127_vendor_gateway_node/`; launch against vendor stack and hardware C1–C5 pending |
 
 C1 (idle stop), C3 (busy rejection) and C4 (idempotent replay) already pass and
 must remain green.
