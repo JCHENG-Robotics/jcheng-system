@@ -8,6 +8,14 @@ All notable changes to this project are documented here. Format based on
 
 ### Added
 
+- M6 mock streaming bridge: `jcheng_system_core/streaming.py`
+  (`MockStreamingBridge`) records one atomic multi-joint `StreamingFrame` per
+  `JOINT_STEP`/`HOME`, with tests for the full-joint frame, deadman release,
+  lease revoke, stop latch and a single-joint step that is not a stream.
+  `TeleopIntake.last_tick_s` now anchors on the actual tick time instead of
+  adding the period (drift/skip found by the cadence test). Evidence:
+  `e2e/reports/20261127_streaming_mock/`. Mock only; the vendor `send_stream`
+  and a bus-read supervisor are not implemented.
 - R10: `jcheng_vendor/gateway_node.py` and
   `jcheng_bringup/launch/gateway_vendor.launch.py`: a ROS process that owns the
   vendor bridge, requires `enable_motion:=true` and a token, performs an

@@ -92,7 +92,10 @@ class TeleopIntake:
             return None
         if self.last_tick_s is not None and now - self.last_tick_s < self.step_period_s:
             return None
-        self.last_tick_s = now if self.last_tick_s is None else self.last_tick_s + self.step_period_s
+        # Anchor on the actual tick time, not on a theoretical grid: adding the
+        # period each time accumulates drift and skips a step when the timer
+        # lands a few microseconds early.
+        self.last_tick_s = now
         try:
             command = self._step_command(now)
         except MotionRejected as exc:
