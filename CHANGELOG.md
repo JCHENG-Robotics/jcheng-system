@@ -251,6 +251,15 @@ All notable changes to this project are documented here. Format based on
 
 ### Fixed
 
+- R11 base intake unified lease: `BaseIntake` no longer accepts a second
+  process-local lease authority. It requires an injected `LeaseView` (or an
+  existing `BaseAuthority` whose view it reuses); `GatewayLeaseView` delegates
+  live checks to the same `LeaseManager` the gateway uses, so a gateway-issued
+  lease is accepted and a lease from a separate manager is rejected. The ROS
+  node adds `lease_source=gateway|none` (default `none`), never constructs a
+  `LeaseManager`, and fails closed with `RejectAllLeaseView` when no in-process
+  shared view is configured. Cross-process lease sharing remains a deployment
+  decision and is not implemented.
 - The previous gateway's `measured` field was a command cache
   (`/controller_manager/servo_states`) and differed from the real bus by up to
   387 pulses; the read-only path now uses an independent `GetBusServoState`

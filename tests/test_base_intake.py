@@ -19,7 +19,11 @@ from pathlib import Path
 
 import pytest
 
-from jcheng_system_core.authority import LeaseManager
+from jcheng_system_core.authority import (
+    GatewayLeaseView,
+    LeaseManager,
+    RejectAllLeaseView,
+)
 from jcheng_system_core.base import (
     ARMED,
     DISABLED,
@@ -41,6 +45,7 @@ from jcheng_system_core.base_intake import (
     STALE_TIMESTAMP,
     UnavailableBaseBridge,
     parse_base_intent,
+    resolve_lease_source,
 )
 from jcheng_system_core.errors import ErrorCode
 from jcheng_system_core.guard import PublisherGuard
@@ -450,6 +455,140 @@ def test_refusing_sink_does_not_fabricate_a_base_output() -> None:
     assert hardware.status()["last_base_duty"] == [0.0, 0.0, 0.0, 0.0]
 
 
+def _gateway_view_setup():
+    stack = MockStack.build(ROOT, clock=ManualClock())
+    view = GatewayLeaseView(stack.authority)
+    sink = RecordingSink()
+    intake = BaseIntake(
+        clock=stack.clock,
+        lease_view=view,
+        contract=stack.version,
+        safety=stack.safety,
+        sink=sink,
+        enabled=True,
+        domain_id=42,
+        lease_source="gateway",
+    )
+    return stack, view, sink, intake
+
+
+def _base_lease(stack: MockStack):
+    return stack.authority.acquire(
+        holder="nav2",
+        scope="base",
+        mode="exclusive",
+        priority=50,
+        ttl_ms=30_000,
+        deadman_required=False,
+        contract=stack.version,
+    )
+
+
+def test_gateway_lease_view_shares_the_gateway_manager() -> None:
+    stack, view, sink, intake = _gateway_view_setup()
+    lease = _base_lease(stack)
+    assert intake.lease_view is view
+    assert intake.base.authority is view
+    result = _handle(intake, _envelope(lease.lease_id))
+    assert result.accepted is True
+    assert result.state == MOVING
+    assert sink.last.is_zero is False
+
+    # The view is live, not a copy: revoking through the gateway manager is
+    # immediately visible to the intake.
+    stack.authority.revoke(lease.lease_id, "operator", "test revoke", stack.version)
+    revoked = _handle(intake, _envelope(lease.lease_id, seq=2))
+    assert revoked.accepted is False
+    assert revoked.code == ErrorCode.LEASE_REVOKED.value
+    assert sink.last.is_zero is True
+
+
+def test_separate_manager_lease_is_rejected() -> None:
+    stack, _view, sink, intake = _gateway_view_setup()
+    other = LeaseManager(stack.version, stack.clock)
+    foreign = other.acquire(
+        holder="nav2",
+        scope="base",
+        mode="exclusive",
+        priority=50,
+        ttl_ms=30_000,
+        deadman_required=False,
+        contract=stack.version,
+    )
+    assert other.check(foreign.lease_id, "base").ok is True
+    assert stack.authority.check(foreign.lease_id, "base").code == ErrorCode.NO_LEASE.value
+
+    result = _handle(intake, _envelope(foreign.lease_id))
+    assert result.accepted is False
+    assert result.code == ErrorCode.NO_LEASE.value
+    # No desired frame: the only sink output is the latched zero.
+    assert sink.count == 1
+    assert sink.last.is_zero is True
+
+
+def test_base_intake_requires_an_injected_lease_view() -> None:
+    with pytest.raises(ValueError):
+        BaseIntake()
+    with pytest.raises(ValueError):
+        BaseIntake(clock=ManualClock())
+
+    stack = MockStack.build(ROOT, clock=ManualClock())
+    base = BaseAuthority(
+        authority=stack.authority,
+        clock=stack.clock,
+        config=BaseConfig(enabled=True),
+        safety=stack.safety,
+        contract=stack.version,
+    )
+    other = LeaseManager(stack.version, stack.clock)
+    with pytest.raises(ValueError):
+        BaseIntake(base, stack.clock, lease_view=GatewayLeaseView(other))
+
+
+def test_reject_all_lease_view_never_falls_back_to_a_local_lease() -> None:
+    stack = MockStack.build(ROOT, clock=ManualClock())
+    lease = _base_lease(stack)
+    sink = RecordingSink()
+    intake = BaseIntake(
+        clock=stack.clock,
+        lease_view=RejectAllLeaseView(stack.version),
+        contract=stack.version,
+        safety=stack.safety,
+        sink=sink,
+        enabled=True,
+        domain_id=42,
+        lease_source="none",
+    )
+    result = _handle(intake, _envelope(lease.lease_id))
+    assert result.accepted is False
+    assert result.code == ErrorCode.NO_LEASE.value
+    assert sink.count == 1
+    assert sink.last.is_zero is True
+    status = intake.status()
+    assert status["lease_source"] == "none"
+    assert status["lease_view"] == "RejectAllLeaseView"
+
+
+def test_resolve_lease_source_defaults_and_unknowns_fail_closed() -> None:
+    stack = MockStack.build(ROOT, clock=ManualClock())
+    view, origin = resolve_lease_source("none", None, stack.version)
+    assert isinstance(view, RejectAllLeaseView)
+    assert origin == "none"
+
+    view, origin = resolve_lease_source("gateway", None, stack.version)
+    assert isinstance(view, RejectAllLeaseView)
+    assert origin == "gateway-unavailable"
+
+    shared = GatewayLeaseView(stack.authority)
+    view, origin = resolve_lease_source("gateway", shared, stack.version)
+    assert view is shared
+    assert origin == "gateway"
+
+    view, origin = resolve_lease_source("bogus", None, stack.version)
+    assert isinstance(view, RejectAllLeaseView)
+    assert origin == "invalid"
+
+
 def test_node_source_is_disabled_by_default_and_does_not_fabricate() -> None:
     source = (
         ROOT
@@ -460,9 +599,12 @@ def test_node_source_is_disabled_by_default_and_does_not_fabricate() -> None:
         / "node.py"
     ).read_text(encoding="utf-8")
     assert 'declare_parameter("enabled", False)' in source
+    assert 'declare_parameter("lease_source", "none")' in source
     assert "BASE_INTENT_TOPIC" in source
-    assert "BaseAuthority(" in source
     assert "BaseIntake(" in source
+    assert "resolve_lease_source(" in source
+    assert "shared_lease_view: LeaseView | None" in source
+    assert "LeaseManager(" not in source
     assert "UnavailableBaseBridge()" in source
     assert "def publish_motor_speeds" not in source
 

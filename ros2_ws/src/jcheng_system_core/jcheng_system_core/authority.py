@@ -13,6 +13,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from functools import wraps
 import threading
+from typing import Protocol, runtime_checkable
 import uuid
 
 from .errors import ErrorCode, MotionRejected
@@ -53,6 +54,27 @@ class LeaseCheck:
 
 def _overlaps(left: str, right: str) -> bool:
     return left == "full" or right == "full" or left == right
+
+
+@runtime_checkable
+class LeaseView(Protocol):
+    """Read-only lease source used by every motion path.
+
+    ``LeaseManager`` itself satisfies the protocol. A consumer must receive
+    the same instance the gateway uses; it must not construct a second
+    manager. ``GatewayLeaseView`` is a thin delegating wrapper for that case.
+    """
+
+    contract: ContractVersion
+
+    def check(
+        self,
+        lease_id: str,
+        scope: str,
+        now: float | None = None,
+        holder: str | None = None,
+        touch: bool = False,
+    ) -> LeaseCheck: ...
 
 
 class LeaseManager:
@@ -404,3 +426,93 @@ class LeaseManager:
             if lease.scope == "full" or lease.scope == scope:
                 return lease
         return None
+
+
+class GatewayLeaseView:
+    """Lease view over the *same* ``LeaseManager`` the gateway uses.
+
+    Every check delegates live to the wrapped manager; the view never copies
+    lease state and never creates a manager. Passing a different manager's
+    lease to this view is therefore rejected as ``NO_LEASE``.
+    """
+
+    def __init__(self, manager: LeaseManager) -> None:
+        self._manager = manager
+
+    @property
+    def manager(self) -> LeaseManager:
+        return self._manager
+
+    @property
+    def contract(self) -> ContractVersion:
+        return self._manager.contract
+
+    def check(
+        self,
+        lease_id: str,
+        scope: str,
+        now: float | None = None,
+        holder: str | None = None,
+        touch: bool = False,
+    ) -> LeaseCheck:
+        return self._manager.check(
+            lease_id, scope, now=now, holder=holder, touch=touch
+        )
+
+    def note_heartbeat(
+        self,
+        lease_id: str,
+        now: float | None = None,
+        holder: str | None = None,
+    ) -> Lease:
+        return self._manager.note_heartbeat(lease_id, now=now, holder=holder)
+
+    def status(self) -> dict[str, object]:
+        leases = self._manager.active()
+        return {
+            "source": "gateway",
+            "contract": self._manager.contract.to_dict(),
+            "active_leases": [lease.lease_id for lease in leases],
+        }
+
+
+class RejectAllLeaseView:
+    """Fail-closed lease view when no shared lease source is configured.
+
+    It intentionally cannot issue, adopt or read any local lease. The node
+    uses it for ``lease_source=none`` and when a configured gateway source is
+    unavailable in the process.
+    """
+
+    def __init__(
+        self,
+        contract: ContractVersion,
+        reason: str = "no shared lease source is configured",
+    ) -> None:
+        self.contract = contract
+        self.reason = str(reason)
+
+    def check(
+        self,
+        lease_id: str,
+        scope: str,
+        now: float | None = None,
+        holder: str | None = None,
+        touch: bool = False,
+    ) -> LeaseCheck:
+        return LeaseCheck(False, ErrorCode.NO_LEASE.value, None, self.reason)
+
+    def note_heartbeat(
+        self,
+        lease_id: str,
+        now: float | None = None,
+        holder: str | None = None,
+    ) -> Lease:
+        raise MotionRejected(ErrorCode.NO_LEASE, self.reason)
+
+    def status(self) -> dict[str, object]:
+        return {
+            "source": "reject-all",
+            "reason": self.reason,
+            "contract": self.contract.to_dict(),
+        }

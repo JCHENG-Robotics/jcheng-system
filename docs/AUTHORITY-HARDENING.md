@@ -166,11 +166,32 @@ The node's default bridge is `UnavailableBaseBridge`, so it never fabricates a
 motor-speed frame: every desired write refuses with `HARDWARE_UNAVAILABLE`
 until a reviewed base bridge exists.
 
+### Unified lease requirement
+
+There is exactly **one** lease authority per system: the `LeaseManager` that
+the gateway owns. `BaseIntake` never constructs a manager; it requires an
+injected `LeaseView` and builds `BaseAuthority`/`HardwareAuthority` against
+that same view. `GatewayLeaseView` delegates every check live to the gateway's
+own manager instance, so a lease acquired through the gateway is visible to
+the base intake and a lease from a separate manager is rejected as
+`NO_LEASE`. A process-local `LeaseManager` is a test double only, never an
+accepted base-intake design.
+
+The ROS node exposes `lease_source=gateway|none`, default **`none`**:
+
+- `none` uses `RejectAllLeaseView` and rejects every envelope; it never falls
+  back to a local lease.
+- `gateway` requires an in-process `GatewayLeaseView` injected into the node.
+  A standalone node cannot obtain the gateway's memory, so without that
+  shared view it fails closed (`gateway-unavailable`) and rejects everything.
+- Any other value is treated as `invalid` and fails closed.
+
+Cross-process lease sharing (for example an IPC lease service or a shared
+daemon) is a **deployment decision** and is not implemented here.
+
 This envelope is a **repo-local, test-only** format. It is **not** a
 `jcheng-interfaces` contract and must not be treated as one; adopting it
-requires an accepted interfaces proposal. The node also owns a process-local
-`LeaseManager`, so cross-process lease sharing with the vendor gateway is not
-implemented in this phase.
+requires an accepted interfaces proposal.
 
 ## 5. Watchdog (`watchdog.py`)
 
@@ -223,7 +244,7 @@ remains `unverified`.
 | `tests/test_base_authority.py` | full base state machine and fault matrix, concurrency, restart, link loss, legacy intent |
 | `tests/test_watchdog.py` | trip latch, blocked upper loop, gateway-exit heartbeat loss, callback failure, base zero output |
 | `tests/test_dds_gate.py` | default deny, opt-in/domain/SROS2/topic, node wiring order |
-| `tests/test_base_intake.py` | exact mobile envelope accepted, flat/legacy rejected, lease/holder/scope, stamp freshness, seq, disabled/domain, stop priority, bad JSON, refusing sink, node default-off |
+| `tests/test_base_intake.py` | exact mobile envelope accepted, flat/legacy rejected, unified gateway lease view, separate-manager lease rejected, reject-all default, lease/holder/scope, stamp freshness, seq, disabled/domain, stop priority, bad JSON, refusing sink, node default-off |
 
 No test starts ROS, DDS, a device, or a robot.
 
@@ -238,9 +259,11 @@ No test starts ROS, DDS, a device, or a robot.
 - `VendorBridge` has no base motor-speed output yet; `submit_base` fails closed
   (`HARDWARE_UNAVAILABLE`) if the bridge lacks `publish_motor_speeds`.
 - The `jcheng_base` intake node is wired to ROS but disabled by default. Its
-  envelope is repo-local/test-only (not an interfaces contract), cross-process
-  lease sharing with the vendor gateway is not implemented, and no base
-  motor-speed bridge exists, so the node's sink refuses every desired write.
+  envelope is repo-local/test-only (not an interfaces contract). The unified
+  lease is enforced in-process only; cross-process lease sharing is a
+  deployment decision and is not implemented, so the standalone node defaults
+  to `lease_source=none` and rejects everything. No base motor-speed bridge
+  exists, so the node's sink refuses every desired write.
 - The watchdog core is not deployed as a unit; the Pi host/container placement
   decision is still open.
 - The DDS gate depends on the process environment; it is not an SROS2

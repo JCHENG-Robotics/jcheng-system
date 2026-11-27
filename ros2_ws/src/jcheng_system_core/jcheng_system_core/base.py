@@ -37,7 +37,7 @@ import threading
 import time
 from typing import Any
 
-from .authority import LeaseManager
+from .authority import LeaseView
 from .errors import ErrorCode, MotionRejected
 from .models import ContractVersion
 from .safety import SafetySupervisor
@@ -183,7 +183,7 @@ Sink = Callable[[BaseIntent | None, BaseCommand], None]
 class BaseAuthority:
     def __init__(
         self,
-        authority: LeaseManager,
+        authority: LeaseView,
         clock: Clock,
         sink: Sink | None = None,
         config: BaseConfig | None = None,

@@ -27,7 +27,7 @@ import threading
 import time
 from typing import Any
 
-from .authority import LeaseCheck, LeaseManager
+from .authority import LeaseCheck, LeaseView
 from .base import BASE_DUTY_CHANNELS, BaseCommand, BaseIntent
 from .errors import ErrorCode, MotionRejected
 from .guard import PublisherGuard
@@ -53,7 +53,7 @@ class HardwareAuthority:
     def __init__(
         self,
         contract: ContractVersion,
-        authority: LeaseManager,
+        authority: LeaseView,
         safety: SafetySupervisor,
         clock: Clock,
         bridge: Any,

@@ -1,6 +1,12 @@
 """JCHENG system mock core."""
 
-from .authority import LeaseCheck, LeaseManager
+from .authority import (
+    GatewayLeaseView,
+    LeaseCheck,
+    LeaseManager,
+    LeaseView,
+    RejectAllLeaseView,
+)
 from .base import (
     ARMED,
     DISABLED,
@@ -25,6 +31,7 @@ from .base_intake import (
     IntakeRejected,
     UnavailableBaseBridge,
     parse_base_intent,
+    resolve_lease_source,
 )
 from .config import ContractConfig, JointLimit, RobotProfile, load_contract
 from .errors import BusReadFailed, ErrorCode, MotionRejected
@@ -67,6 +74,7 @@ __all__ = [
     "EvidenceStore",
     "FAULT",
     "GatewayApp",
+    "GatewayLeaseView",
     "GatewayServer",
     "GuardResult",
     "HardwareAuthority",
@@ -78,6 +86,7 @@ __all__ = [
     "Lease",
     "LeaseCheck",
     "LeaseManager",
+    "LeaseView",
     "MOVING",
     "ManualClock",
     "MockHardwareBridge",
@@ -85,6 +94,7 @@ __all__ = [
     "MotionArbiter",
     "MotionRejected",
     "PublisherGuard",
+    "RejectAllLeaseView",
     "RobotProfile",
     "STOP_LATCHED",
     "SafetyLimits",
@@ -95,6 +105,7 @@ __all__ = [
     "evaluate_dds_execute_gate",
     "load_contract",
     "parse_base_intent",
+    "resolve_lease_source",
     "run_all",
     "write_report",
 ]

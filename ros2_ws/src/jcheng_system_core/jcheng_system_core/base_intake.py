@@ -29,15 +29,24 @@ hardware.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 import json
 import math
 import time
 from typing import Any
 
-from .base import BaseAuthority, BaseCommand, BaseDecision, BaseIntent
+from .authority import LeaseView, RejectAllLeaseView
+from .base import (
+    BaseAuthority,
+    BaseCommand,
+    BaseConfig,
+    BaseDecision,
+    BaseIntent,
+)
 from .errors import ErrorCode, MotionRejected
 from .models import ContractVersion
+from .safety import SafetySupervisor
 from .timebase import Clock
 
 BASE_INTENT_SCHEMA = "jcheng.mobile.base_intent.v1"
@@ -186,24 +195,96 @@ class BaseIntakeResult:
     decision: BaseDecision | None = None
 
 
+def resolve_lease_source(
+    source: str,
+    shared_view: LeaseView | None,
+    contract: ContractVersion,
+) -> tuple[LeaseView, str]:
+    """Resolve the configured lease source, failing closed.
+
+    ``gateway`` requires an injected view over the gateway's own manager;
+    a standalone node cannot obtain one across processes. ``none``, an
+    unknown value, or an unavailable gateway view all return a reject-all
+    view; no local ``LeaseManager`` is ever created here.
+    """
+
+    value = str(source or "").strip().lower()
+    if value == "gateway":
+        if shared_view is None:
+            return (
+                RejectAllLeaseView(
+                    contract,
+                    "lease_source=gateway but no shared gateway lease view "
+                    "is available in this process",
+                ),
+                "gateway-unavailable",
+            )
+        return shared_view, "gateway"
+    if value == "none":
+        return (
+            RejectAllLeaseView(contract, "lease_source=none: no shared lease source"),
+            "none",
+        )
+    return (
+        RejectAllLeaseView(contract, f"unknown lease_source {source!r}"),
+        "invalid",
+    )
+
+
 class BaseIntake:
     """Enabled/domain gate plus envelope parsing in front of ``BaseAuthority``."""
 
     def __init__(
         self,
-        base: BaseAuthority,
-        clock: Clock,
+        base: BaseAuthority | None = None,
+        clock: Clock | None = None,
         *,
+        lease_view: LeaseView | None = None,
         contract: ContractVersion | None = None,
+        safety: SafetySupervisor | None = None,
+        sink: Callable[[BaseIntent | None, BaseCommand], None] | None = None,
+        base_config: BaseConfig | None = None,
         enabled: bool = False,
         domain_id: int | None = None,
         required_domain_id: int = BASE_INTENT_DOMAIN_ID,
         topic: str = BASE_INTENT_TOPIC,
         max_age_ns: int = DEFAULT_MAX_AGE_NS,
         max_future_ns: int = DEFAULT_MAX_FUTURE_NS,
+        lease_source: str = "injected",
     ) -> None:
+        if base is not None:
+            existing = getattr(base, "authority", None)
+            if lease_view is not None and existing is not lease_view:
+                raise ValueError(
+                    "lease_view does not match the BaseAuthority lease source"
+                )
+            if clock is None:
+                clock = base.clock
+            resolved_view = lease_view or existing
+        else:
+            if lease_view is None:
+                raise ValueError(
+                    "BaseIntake requires an injected lease view; it must not "
+                    "create a local lease authority"
+                )
+            if clock is None:
+                raise ValueError(
+                    "BaseIntake requires a clock when constructing a BaseAuthority"
+                )
+            resolved_contract = contract or lease_view.contract
+            base = BaseAuthority(
+                authority=lease_view,
+                clock=clock,
+                sink=sink,
+                config=base_config or BaseConfig(enabled=enabled),
+                safety=safety,
+                contract=resolved_contract,
+            )
+            resolved_view = lease_view
         self.base = base
         self.clock = clock
+        self.lease_view = resolved_view
+        self.lease_source = str(lease_source)
         self.contract = contract or base.contract
         self.topic = str(topic)
         self.required_domain_id = int(required_domain_id)
@@ -295,6 +376,8 @@ class BaseIntake:
             "topic": self.topic,
             "domain_id": self.domain_id,
             "required_domain_id": self.required_domain_id,
+            "lease_source": self.lease_source,
+            "lease_view": type(self.lease_view).__name__ if self.lease_view else "",
             "schema": BASE_INTENT_SCHEMA,
             "counters": dict(self.counters),
             "last_result": None
