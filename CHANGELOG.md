@@ -8,6 +8,28 @@ All notable changes to this project are documented here. Format based on
 
 ### Added
 
+- R11 authority hardening (offline): `jcheng_system_core/hardware_authority.py`
+  is the single logical hardware exit. It owns the bridge and checks
+  contract, lease/holder/scope, deadman, stop latch, guard and limits before
+  `execute_arm`, `submit_base`, `stop` or `status`; unknown state fails closed.
+  `jcheng_vendor.executor.HardwareExecutor` now validates and writes through
+  it (HTTP behaviour unchanged). `authority.py` gains holder-validated
+  renew/release, `deadman_ms` tracking via `note_heartbeat`/`check`,
+  `SAFETY_HEARTBEAT_MISSING` rejection, and a revoke stop hook wired in the
+  vendor stack/node. `gateway.py` requires `holder`/`client_id` for lease
+  DELETE/renew (403 on missing/mismatch) and exempts `/v1/motion/stop` from the
+  motion rate limit so stop stays reachable after rate limiting or lease
+  expiry. New ROS-free `base.py` (BaseIntent/BaseCommand state machine,
+  DISABLED/IDLE/ARMED/MOVING/STOP_LATCHED/FAULT, default-off, configurable but
+  unverified 200 ms intent timeout) and `watchdog.py` (independent heartbeat
+  watchdog core with latched trip and stop callback). New pure
+  `vendor_gate.py` denies DDS `ExecuteMotion` unless
+  `JCHENG_ALLOW_DDS_EXECUTE=1`, domain 41, SROS2 enforced and the expected
+  topic; `jcheng_vendor/node.py` evaluates it before creating the retained
+  ActionServer. Tests: `test_hardware_authority.py`, `test_lease_holder.py`,
+  `test_base_authority.py`, `test_watchdog.py`, `test_dds_gate.py`.
+  `docs/AUTHORITY-HARDENING.md`. Offline only: no hardware, ROS, DDS or
+  `deploy/` change; 200/300 ms values are provisional and unverified.
 - R10 hardware gateway deployment: `deploy/armpi-ultra` gains a
   `jcheng-gateway-vendor.service` unit, run script and installer for the
   hardware-backed `/v1` gateway on loopback 8766. The vendor gateway startup
@@ -181,6 +203,10 @@ All notable changes to this project are documented here. Format based on
 
 ### Changed
 
+- R11 breaking client change: `DELETE /v1/leases/{id}` and
+  `POST /v1/leases/{id}/renew` require `holder` or `client_id` (body or query);
+  missing or mismatched holders return 403. Stop responses and motion success
+  payloads are unchanged.
 - M4/M5 motion target (2026-11-26): the `jcheng_system_core` gateway with the
   M5.2 `jcheng_vendor` hardware executor. The frozen `armpi_debug_gateway` is
   legacy and not the motion authority; its R7 race is recorded but not fixed.
