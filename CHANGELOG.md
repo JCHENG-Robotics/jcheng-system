@@ -8,6 +8,34 @@ All notable changes to this project are documented here. Format based on
 
 ### Added
 
+- R10: `jcheng_vendor/gateway_node.py` and
+  `jcheng_bringup/launch/gateway_vendor.launch.py`: a ROS process that owns the
+  vendor bridge, requires `enable_motion:=true` and a token, performs an
+  initial bus read before serving, polls the bus at about 0.25 s, serves
+  `GatewayApp` over HTTP, runs `arbiter.tick`, and routes `/safety_stop` to the
+  executor stop. Humble build with the real vendor message definitions passed
+  (16 packages, `pytest`, `tests_ros`, M5.2 gate); launch against the live
+  vendor stack and hardware C1–C5 remain.
+- R9: `jcheng_vendor.gateway_stack.VendorStack` composes the M5.2
+  `HardwareExecutor` with the HTTP `GatewayApp`; `VendorGatewayHardware`
+  adapts the read surface, and `mode="hardware"` / `capabilities=("hardware",)`
+  replace the hard-coded mock advertisement. `MockStack` keeps the mock mode.
+  Offline `tests/test_vendor_gateway_stack.py` drives `/v1/motion/execute` to a
+  bus-verified `COMPLETED`. The ROS process that owns `VendorBridge` and polls
+  the bus is still required.
+- R8: `jcheng_vendor.executor.HardwareExecutor` now orders the bridge send and
+  the stop under the same `_active_lock`. A stop accepted before the send
+  publishes no command; a stop after the send orders its hold after the write.
+  `tests/test_vendor_executor_c2p.py` covers both interleavings and a normal
+  bus-verified completion. Evidence:
+  `e2e/reports/20261126_vendor_executor_c2p/`.
+- R7 offline finding against the deployed `armpi_debug_gateway`:
+  `tools/deployed_guard_race_probe.py` reproduces a lost stop between
+  `MotionGuard.validate()` and `start()`; the command can then complete. No
+  ROS or hardware is used. Evidence:
+  `e2e/reports/20261126_deployed_guard_race/`. The frozen baseline is not
+  edited; the chosen target is the M5.2 executor (R8/R9), so this remains a
+  legacy-gateway risk.
 - `jcheng_system_core.teleop.TeleopIntake`: mock/system-side teleoperation
   intake. It validates contract, lease, sequence, deadman, stamp and mode,
   holds the latest setpoint, and converts it at a bounded period into a
@@ -101,10 +129,13 @@ All notable changes to this project are documented here. Format based on
 
 ### Changed
 
-- R5 is filed as a contract proposal in
-  `jcheng-interfaces/docs/proposals/stop-confirmation-levels.md`:
+- M4/M5 motion target (2026-11-26): the `jcheng_system_core` gateway with the
+  M5.2 `jcheng_vendor` hardware executor. The frozen `armpi_debug_gateway` is
+  legacy and not the motion authority; its R7 race is recorded but not fixed.
+- R5 is merged as a contract proposal in `jcheng-interfaces` (#8):
   `StopResponse` would add `confirmation` (request accepted / backend
-  confirmed) and `physical_stop: unverified`. No schema or hash change yet.
+  confirmed) and `physical_stop: unverified`. No schema, tag or contract hash
+  change yet.
 - `MotionArbiter` now has a single terminal writer and a session lock:
   `_complete_once` is the only place a result and its idempotency entry are
   written; `stop()` completes `ABORTED` but keeps the session active until the

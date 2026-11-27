@@ -36,10 +36,32 @@ Original failure:
 passed `m1-gate`, `m3-mock`, `m4-readonly`, `m5-mock`, `m5-vendor` and
 `m6-replay` on the merged commit.
 
-R5 (`StopResult` confirmation levels) is filed as
-`jcheng-interfaces/docs/proposals/stop-confirmation-levels.md`; the schema
-review is pending. The deployed `armpi_debug_gateway` was not probed, and M4
-must repeat C1–C5 there before any hardware session.
+R5 (`StopResult` confirmation levels) is merged as a proposal in
+`jcheng-interfaces` (#8); the schema, tag and contract hash are unchanged, so
+the system gateway does not emit the fields yet. The deployed legacy
+`armpi_debug_gateway` is not the motion target; see the target decision below.
+
+R7 (2026-11-26) is an offline finding against that deployed gateway: a stop
+that arrives between `MotionGuard.validate()` and `start()` is lost, and the
+command can then complete. The frozen baseline is not edited; its guard stop
+is also not a latch. Evidence:
+[`e2e/reports/20261126_deployed_guard_race/`](e2e/reports/20261126_deployed_guard_race/README.md).
+
+**Target decision (2026-11-26):** the M4/M5 motion target is the
+`jcheng_system_core` gateway with the M5.2 `jcheng_vendor` hardware executor,
+not the frozen `armpi_debug_gateway`. R8 fixed the executor's C2p send/stop
+window offline: send and stop share `_active_lock`, so a stop before the send
+publishes no command. Evidence:
+[`e2e/reports/20261126_vendor_executor_c2p/`](e2e/reports/20261126_vendor_executor_c2p/README.md).
+The deployed legacy gateway's R7 race remains a documented risk but is not on
+the chosen path. R9 composes the M5.2 executor behind the HTTP `GatewayApp`
+(`VendorStack`, `mode="hardware"`) and proves `/v1/motion/execute` offline. R10
+adds the ROS gateway node and launch (token + `enable_motion` gate, initial bus
+read, 0.25 s poll, HTTP + tick); the Humble build with real vendor message
+definitions passed (16 packages, tests, M5.2 gate), but it has not been launched
+against the live vendor stack or hardware. A hardware C1–C5 session remains; if
+the deployed legacy gateway is ever used, it needs the atomic dispatch fix and
+C1–C5 as well.
 
 ## Milestones
 

@@ -236,19 +236,37 @@ class HardwareExecutor:
         try:
             duration = float(command.duration_s or 2.0)
             start_pulses = self.bridge.pulse_snapshot()
-            if command.kind == "JOINT_STEP":
-                target_pulse = self.bridge.send_step(
-                    command.joint_names[0],
-                    float(command.target_positions[0]),
-                    duration,
-                )
-            else:
-                assert command.gripper is not None
-                target_pulse = self.bridge.send_gripper(
-                    float(command.gripper.position_rad),
-                    float(command.gripper.duration_s or duration),
-                )
-                duration = float(command.gripper.duration_s or duration)
+            # The stop path sets the stop event and publishes the hold under
+            # this same lock. A stop that lands before this send makes the
+            # check below win and no command is published; a stop that lands
+            # after the send orders its hold after the command write.
+            with self._active_lock:
+                if self._stop_event.is_set():
+                    self.bridge.hold()
+                    self.safety.end_motion()
+                    return self._complete(
+                        command,
+                        report,
+                        self.clock.now(),
+                        outcome="ABORTED",
+                        code=ErrorCode.SAFETY_STOP_LATCHED.value,
+                        message="motion aborted before the bridge send",
+                        bus_verified=False,
+                        measured_positions=list(self.bridge.state().positions),
+                    )
+                if command.kind == "JOINT_STEP":
+                    target_pulse = self.bridge.send_step(
+                        command.joint_names[0],
+                        float(command.target_positions[0]),
+                        duration,
+                    )
+                else:
+                    assert command.gripper is not None
+                    target_pulse = self.bridge.send_gripper(
+                        float(command.gripper.position_rad),
+                        float(command.gripper.duration_s or duration),
+                    )
+                    duration = float(command.gripper.duration_s or duration)
             deadline = self.clock.now() + duration + self.settle_s
             while self.clock.now() < deadline:
                 if self._stop_event.is_set():
@@ -385,10 +403,17 @@ class HardwareExecutor:
         now = self._now(now)
         if not operator_id.strip():
             raise MotionRejected(ErrorCode.INVALID_COMMAND, "operator_id is required")
-        self._stop_event.set()
-        self.safety.latch(ErrorCode.SAFETY_STOP_LATCHED, f"software stop by {operator_id}: {reason}")
-        started = time.monotonic()
-        self.bridge.hold()
+        # Same lock as the send. The stop either lands before the send check
+        # (and the command is not published) or after the command write (and
+        # this hold follows it).
+        with self._active_lock:
+            self._stop_event.set()
+            self.safety.latch(
+                ErrorCode.SAFETY_STOP_LATCHED,
+                f"software stop by {operator_id}: {reason}",
+            )
+            started = time.monotonic()
+            self.bridge.hold()
         self.last_stop_latency_ms = (time.monotonic() - started) * 1000.0
         with self._evidence_lock:
             self.evidence.record_event(
@@ -414,6 +439,7 @@ class HardwareExecutor:
             return
         lease = self.authority.check(active.lease_id, self.scope_for_kind(active.kind), now)
         if not lease.ok:
-            self._stop_event.set()
-            self.safety.latch(lease.code, lease.message or "lease expired or revoked")
-            self.bridge.hold()
+            with self._active_lock:
+                self._stop_event.set()
+                self.safety.latch(lease.code, lease.message or "lease expired or revoked")
+                self.bridge.hold()

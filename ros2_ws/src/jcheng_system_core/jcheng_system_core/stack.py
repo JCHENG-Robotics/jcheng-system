@@ -28,6 +28,8 @@ class MockStack:
     guard: PublisherGuard
     evidence: EvidenceStore
     arbiter: MotionArbiter
+    mode: str = "mock"
+    capabilities: tuple[str, ...] = ("mock",)
 
     @classmethod
     def build(

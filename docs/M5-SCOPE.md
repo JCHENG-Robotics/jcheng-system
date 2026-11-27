@@ -38,6 +38,53 @@
   - 残余：S7 状态过期注入、S9 运行时发布者检测未单独实机验证。
 - 任何下一次实机动作仍需单独、明确授权。
 
+### M5.2 C2p 顺序修复（R8，2026-11-26）
+
+**目标决策：** M4/M5 的运动目标是 `jcheng_system_core` 网关 + 本包的
+`HardwareExecutor`；冻结的 `armpi_debug_gateway` 不再作为运动权威。
+
+`HardwareExecutor.execute` 原先在 `_active` 置位后、`send_step` 前释放
+`_active_lock`；`stop` 在该窗口置停止、latch 并 hold，随后 execute 仍会
+发送命令。R8 让 `send_step`/`send_gripper` 与 `stop` 的
+`set + latch + hold` 共用 `_active_lock`：
+
+- `execute` 在锁内检查 `_stop_event`；已停止则不发送，直接 `ABORTED`。
+- `stop` 在锁内置停止并 hold；发送要么在 stop 之前，要么 hold 在其后。
+- `tick` 的租约丢失路径同样在锁内置停止并 hold。
+
+离线验证：`tests/test_vendor_executor_c2p.py` 覆盖“stop 在 send 前”、
+“stop 在 send 后”和正常 bus-verified 完成；证据
+`e2e/reports/20261126_vendor_executor_c2p/`。实机 C1–C5 仍需单独授权。
+
+### M5.2 HTTP 网关组合（R9，2026-11-26）
+
+`jcheng_vendor.gateway_stack.VendorStack` 把 `HardwareExecutor` 接入
+`GatewayApp`：
+
+- `arbiter` = `HardwareExecutor`；
+- `hardware` = `VendorGatewayHardware` 适配器（`state(now)` /
+  `bus_read(now)` / `hold(now)` / `bus_failed`）；
+- `mode="hardware"`、`capabilities=("hardware",)`；`MockStack` 保持
+  `mock`。
+
+离线测试 `tests/test_vendor_gateway_stack.py` 用假桥驱动
+`/v1/motion/execute` 到 bus-verified `COMPLETED`。
+
+ROS 进程 `jcheng_vendor/gateway_node.py`（R10，2026-11-27）实现：
+
+- 必须 `enable_motion:=true` 且提供 `JCHENG_GATEWAY_TOKEN`，否则拒绝启动；
+- 启动前先做一次总线读取，失败即拒绝启动；
+- 约 0.25 s 轮询总线并 `safety.update_state`；
+- `GatewayServer` 提供 `/v1`，`TickThread` 20 Hz 调 `arbiter.tick`；
+- `/safety_stop=true` 走 `HardwareExecutor.stop`；
+- launch：`jcheng_bringup/launch/gateway_vendor.launch.py`，token 只从环境
+  读取，host 默认回环，motion 默认关闭。
+
+节点已通过语法编译检查、离线组合测试，以及带真实厂商消息定义的 Humble
+构建（16 包，`pytest`/`tests_ros`/M5.2 gate 通过）；证据
+`e2e/reports/20261127_vendor_gateway_node/`。尚未对运行中的厂商栈启动，实机
+C1–C5 仍需单独授权。
+
 ## 2. 服务/action 名称（M5.1）
 
 ```text

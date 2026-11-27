@@ -140,7 +140,7 @@ class GatewayApp:
             "contract": self.stack.version.to_dict(),
             "profile_hash": self.stack.profile.profile_hash,
             "system_version": "0.1.0",
-            "mode": "mock",
+            "mode": getattr(self.stack, "mode", "mock"),
             "read_only": True,
         }
 
@@ -169,7 +169,9 @@ class GatewayApp:
                 "status": "ok",
                 "contract": self.stack.version.to_dict(),
                 "safety": self.stack.safety.current_state().to_dict(self.stack.clock),
-                "capabilities": ["mock"],
+                "capabilities": list(
+                    getattr(self.stack, "capabilities", ("mock",))
+                ),
             }
         if not self._auth(headers):
             return 401, self._error(ErrorCode.UNAUTHORIZED.value, "missing or invalid token")

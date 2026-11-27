@@ -76,12 +76,28 @@ pong，close 结束流，其他客户端数据忽略。没有租约、运动、�
 | `jcheng_authority` | 租约诊断 | 未变；租约服务留到 M5 |
 | `jcheng_motion` | 仲裁诊断 | 未变；action 留到 M5 |
 | `jcheng_hardware` | Mock 状态 | 增加只读总线桥 `readonly.py` |
-| `jcheng_gateway` | HTTP 网关 | Mock 网关未变；只读网关在 `jcheng_telemetry` |
+| `jcheng_gateway` | HTTP 网关 | Mock 网关入口未变；硬件网关节点在 `jcheng_vendor` |
+| `jcheng_vendor` | — | M5.2 执行器；新增 `gateway_node.py` / `VendorStack`，HTTP `/v1` 承载 `HardwareExecutor` |
 | `jcheng_guard` | 白名单诊断 | 未变；运行时检测留到 M5 |
 | `jcheng_testkit` | S1–S17 | 未变 |
 | `jcheng_telemetry` | — | 新增：遥测、只读网关、预检、证据、短时探针 |
 | `jcheng_runtime` | — | M5.1 新增：租约/安全/校验服务、`ExecuteMotion` action（Mock） |
-| `jcheng_bringup` | Mock launch | 增加 `readonly.launch.py`、`motion_mock.launch.py` |
+| `jcheng_bringup` | Mock launch | 增加 `readonly.launch.py`、`motion_mock.launch.py`、`motion_vendor.launch.py`、`gateway_vendor.launch.py` |
+
+### 2.1 硬件网关组合（M4/M5 目标）
+
+```text
+HTTP client
+  → jcheng_gateway_vendor (jcheng_vendor/gateway_node.py)
+      ├─ VendorStack → HardwareExecutor → VendorBridge → /servo_controller
+      ├─ GatewayApp  → /v1 contract/safety/lease/motion
+      ├─ bus poll 0.25 s → GetBusServoState → safety.update_state
+      └─ TickThread 20 Hz → arbiter.tick
+```
+
+节点要求 `enable_motion:=true` 和 `JCHENG_GATEWAY_TOKEN`；启动前先做一次总线
+读取，失败即拒绝启动。它不启动厂商容器，不打开串口。`/v1/health` 报告
+`capabilities: ["hardware"]`。硬件 C1–C5 仍需单独授权的实机会话。
 
 ## 3. 安全边界（M3 已实现）
 
