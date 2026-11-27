@@ -8,6 +8,12 @@ All notable changes to this project are documented here. Format based on
 
 ### Added
 
+- M6 streaming runtime: `jcheng_runtime` accepts `streaming:=true` and builds
+  `TeleopIntake(streaming=True, step_period_s=0.05)`. The 20 Hz timer opens one
+  arbiter session, publishes frames with `stream` and closes on the neutral
+  frame. `tools/teleop_stream_probe.py` drives a 5-joint script; on the mock
+  stack all five joints moved ±0.33 rad with no step warning or latch. Evidence:
+  `e2e/reports/20261127_streaming_runtime/`. Mock only; no vendor write.
 - M6 streaming intake: `TeleopIntake(streaming=True)` opens one arbiter
   session (`start`), publishes frames with `stream`, and closes on
   deadman/timeout (`finish`) or explicit stop (latched). 20 Hz test: 10 atomic

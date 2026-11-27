@@ -63,6 +63,7 @@ class RuntimeNode(Node):
         self.declare_parameter("evidence_path", "")
         self.declare_parameter("sim_bridge", False)
         self.declare_parameter("robot", "armpi_ultra")
+        self.declare_parameter("streaming", False)
         root_value = str(self.get_parameter("root").value or os.environ.get("JCHENG_ROOT", ""))
         root = Path(root_value).expanduser() if root_value else find_repo_root()
         evidence = str(self.get_parameter("evidence_path").value or "") or None
@@ -95,7 +96,16 @@ class RuntimeNode(Node):
             self.get_logger().info(
                 "teleop simulation bridge enabled: runtime on its domain, bridge on domain 43 (test-only)"
             )
-        self.teleop = TeleopIntake(self.stack)
+        streaming = bool(self.get_parameter("streaming").value)
+        self.teleop = TeleopIntake(
+            self.stack,
+            streaming=streaming,
+            step_period_s=0.05 if streaming else 0.1,
+        )
+        if streaming:
+            self.get_logger().info(
+                "teleop streaming session enabled: one arbiter start/stream/finish, 20 Hz"
+            )
         self._lock = threading.RLock()
         self._feedback_seq = 0
         callback_group = ReentrantCallbackGroup()
