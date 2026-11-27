@@ -36,10 +36,11 @@ Original failure:
 passed `m1-gate`, `m3-mock`, `m4-readonly`, `m5-mock`, `m5-vendor` and
 `m6-replay` on the merged commit.
 
-R5 (`StopResult` confirmation levels) is merged as a proposal in
-`jcheng-interfaces` (#8); the schema, tag and contract hash are unchanged, so
-the system gateway does not emit the fields yet. The deployed legacy
-`armpi_debug_gateway` is not the motion target; see the target decision below.
+R5 (`StopResult` confirmation levels) is implemented as an additive v0.2.0
+schema in `jcheng-interfaces` and in the system `StopResult`/gateway, with
+offline tests. The tag, contract pin and lock update remain; until then the
+system still pins v0.1.0. The deployed legacy `armpi_debug_gateway` is not the
+motion target; see the target decision below.
 
 R7 (2026-11-26) is an offline finding against that deployed gateway: a stop
 that arrives between `MotionGuard.validate()` and `start()` is lost, and the
