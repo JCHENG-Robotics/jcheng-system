@@ -36,10 +36,11 @@ Original failure:
 passed `m1-gate`, `m3-mock`, `m4-readonly`, `m5-mock`, `m5-vendor` and
 `m6-replay` on the merged commit.
 
-R5 (`StopResult` confirmation levels) is merged as a proposal in
-`jcheng-interfaces` (#8); the schema, tag and contract hash are unchanged, so
-the system gateway does not emit the fields yet. The deployed legacy
-`armpi_debug_gateway` is not the motion target; see the target decision below.
+R5 (`StopResult` confirmation levels) is implemented as an additive v0.2.0
+schema in `jcheng-interfaces` and in the system `StopResult`/gateway, with
+offline tests. The tag, contract pin and lock update remain; until then the
+system still pins v0.1.0. The deployed legacy `armpi_debug_gateway` is not the
+motion target; see the target decision below.
 
 R7 (2026-11-26) is an offline finding against that deployed gateway: a stop
 that arrives between `MotionGuard.validate()` and `start()` is lost, and the
@@ -59,9 +60,12 @@ the chosen path. R9 composes the M5.2 executor behind the HTTP `GatewayApp`
 adds the ROS gateway node and launch (token + `enable_motion` gate, initial bus
 read, 0.25 s poll, HTTP + tick); the Humble build with real vendor message
 definitions passed (16 packages, tests, M5.2 gate), but it has not been launched
-against the live vendor stack or hardware. A hardware C1–C5 session remains; if
-the deployed legacy gateway is ever used, it needs the atomic dispatch fix and
-C1–C5 as well.
+against the live vendor stack or hardware. A 2026-11-27 read-only precheck
+found the robot reachable on 8765 (aux camera/TF) but 8766 closed, no
+battery/joint/measured telemetry, and the `pi` SSH restricted to time sync
+(no shell/SFTP), so R10 could not be deployed. A hardware C1–C5 session
+remains; if the deployed legacy gateway is ever used, it needs the atomic
+dispatch fix and C1–C5 as well.
 
 ## Milestones
 

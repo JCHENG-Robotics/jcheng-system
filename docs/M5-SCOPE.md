@@ -85,6 +85,11 @@ ROS 进程 `jcheng_vendor/gateway_node.py`（R10，2026-11-27）实现：
 `e2e/reports/20261127_vendor_gateway_node/`。尚未对运行中的厂商栈启动，实机
 C1–C5 仍需单独授权。
 
+2026-11-27 只读预检：8765 旧只读网关可达（辅助相机/TF 正常），8766 未启动；
+电池、关节、measured、深度相机均无数据；`pi` SSH 仅支持时间同步
+`get`/`set <epoch>`，无 shell/SFTP，无法部署 R10。未发送任何运动命令，未重启
+厂商容器。证据：`e2e/reports/20261127_robot_precheck/`。
+
 ## 2. 服务/action 名称（M5.1）
 
 ```text

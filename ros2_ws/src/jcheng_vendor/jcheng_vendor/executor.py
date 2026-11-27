@@ -427,6 +427,9 @@ class HardwareExecutor:
             safety=self.safety.current_state(),
             message="software stop requested; not an emergency stop",
             requested_at=now,
+            # stop() returns after the hold is published; the worker records
+            # the terminal ABORTED later. Do not claim S2 from this call.
+            confirmation="request_accepted",
         )
 
     def tick(self, now: float | None = None) -> None:
