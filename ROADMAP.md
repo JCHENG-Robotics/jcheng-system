@@ -37,10 +37,9 @@ passed `m1-gate`, `m3-mock`, `m4-readonly`, `m5-mock`, `m5-vendor` and
 `m6-replay` on the merged commit.
 
 R5 (`StopResult` confirmation levels) is implemented as an additive v0.2.0
-schema in `jcheng-interfaces` and in the system `StopResult`/gateway, with
-offline tests. The tag, contract pin and lock update remain; until then the
-system still pins v0.1.0. The deployed legacy `armpi_debug_gateway` is not the
-motion target; see the target decision below.
+schema in `jcheng-interfaces`; the signed `v0.2.0` tag is verified and the
+system contract/lock pins now match it. The deployed legacy
+`armpi_debug_gateway` is not the motion target; see the target decision below.
 
 R7 (2026-11-26) is an offline finding against that deployed gateway: a stop
 that arrives between `MotionGuard.validate()` and `start()` is lost, and the
@@ -103,7 +102,7 @@ dispatch fix and C1–C5 as well.
 
 ## Dependencies
 
-- `jcheng-interfaces` v0.1.0, contract hash
-  `sha256:0b8d72ced7f54d444d6851d8b99a51a78e2bed3f687324f51a15f76557f24b42`.
+- `jcheng-interfaces` v0.2.0, contract hash
+  `sha256:afca22a42f7163e0351d185d5a8577b0b51f2f3da4b92278f161a4a7d2c35b1c`.
 - `locks/ecosystem.lock.yaml` pins interfaces, contract hash and profile hash.
 - Every L5 gate requires separate, explicit operator authorization.

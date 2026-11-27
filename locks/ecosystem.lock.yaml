@@ -11,10 +11,10 @@ toolchain:
 repos:
   jcheng-interfaces:
     url: "https://github.com/JCHENG-Robotics/jcheng-interfaces"
-    version: "0.1.0"
-    tag: "v0.1.0"
-    commit: "33f1293bcdcc5c866fbd655232e26a1f3a756006"
-    contract_hash: "sha256:0b8d72ced7f54d444d6851d8b99a51a78e2bed3f687324f51a15f76557f24b42"
+    version: "0.2.0"
+    tag: "v0.2.0"
+    commit: "b03a054a59f70c24741fce37ebe1bb03978d9021"
+    contract_hash: "sha256:afca22a42f7163e0351d185d5a8577b0b51f2f3da4b92278f161a4a7d2c35b1c"
 modules: {}
 robot:
   name: armpi_ultra

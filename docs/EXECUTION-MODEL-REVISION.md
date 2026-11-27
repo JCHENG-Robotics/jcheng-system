@@ -5,8 +5,8 @@
 > M5.2 `jcheng_vendor` hardware executor**, not the frozen
 > `armpi_debug_gateway` (decision 2026-11-26).
 > R5 (stop confirmation fields) has an additive v0.2.0 schema in
-> `jcheng-interfaces` and the `StopResult` fields/system tests are implemented;
-> the tag, contract pin and lock update follow the interfaces merge.
+> `jcheng-interfaces` (signed tag verified), and the system `StopResult`,
+> gateway and contract/lock pins are implemented.
 > Trigger: P0 concurrency probe C2 failed. Evidence:
 > [`e2e/reports/20261126_concurrency_probe/`](../e2e/reports/20261126_concurrency_probe/README.md).
 > Re-run evidence:
@@ -335,7 +335,7 @@ without the harness delay (finding F5). Proposed:
 | R2 | Stop path with `STOPPING` and `MOTION_BUSY` until the worker exits | C2-stress 0 completed-after-stop, 0 500 | **Done** (mock, 2026-11-26) |
 | R3 | Tick thread and lease checks before completion | C5, C5b PASS | **Done** (mock, 2026-11-26) |
 | R4 | ROS runtime cancel path; no lock across execute/tick | Same probes through the runtime adapter | **Done**; `m5-mock` green in CI run 45748815799 |
-| R5 | `StopResult` confirmation fields (contract v0.2.0) | Schema tests; system tests; tag/pin pending | **Implemented in branches** 2026-11-27: interfaces schema and system fields; contract pin/lock follows the `v0.2.0` tag |
+| R5 | `StopResult` confirmation fields (contract v0.2.0) | Schema tests; system tests; signed tag verified | **Done** 2026-11-27: interfaces `v0.2.0` `verified=true`; system fields and contract/lock pin updated |
 | R6 | Re-run C1–C5 on the mock and on the deployed gateway model | M3 unblock | **Mock done**; hardware C1–C5 still required |
 | R7 | Deployed `armpi_debug_gateway` dispatch/stop ordering | Offline probe; legacy gateway only | **Finding filed** 2026-11-26: stop lost between `validate` and `start`; not the chosen target, not fixed |
 | R8 | M5.2 `HardwareExecutor` send/stop ordering | C2p offline: no send after an accepted stop | **Done** (offline, 2026-11-26): send and stop share `_active_lock`; `tests/test_vendor_executor_c2p.py`; `e2e/reports/20261126_vendor_executor_c2p/` |

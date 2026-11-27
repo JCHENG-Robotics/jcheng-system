@@ -43,8 +43,8 @@ HTTP client
 
 - 只有硬件桥发布命令；guard 允许的发布者为 `jcheng_hardware`。
 - 完成判定来自总线读数，不来自命令缓存；总线失败锁存 `UNKNOWN`。
-- 契约哈希固定为 interfaces v0.1.0：
-  `sha256:0b8d72ced7f54d444d6851d8b99a51a78e2bed3f687324f51a15f76557f24b42`。
+- 契约哈希固定为 interfaces v0.2.0：
+  `sha256:afca22a42f7163e0351d185d5a8577b0b51f2f3da4b92278f161a4a7d2c35b1c`。
 
 ### 2.1 M4 只读链路
 
