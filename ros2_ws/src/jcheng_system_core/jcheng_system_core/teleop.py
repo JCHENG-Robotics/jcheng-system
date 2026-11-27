@@ -42,6 +42,9 @@ class TeleopIntake:
     step_period_s: float = 0.1
     max_velocity_rad_s: float = 0.5
     max_stamp_skew_s: float = 0.5
+    # M6: one long session opened by start/stream/finish instead of one
+    # blocking execute per step. The mock bridge is atomic per frame.
+    streaming: bool = False
     active: bool = False
     last_seq: int | None = None
     last_received_s: float | None = None
@@ -49,6 +52,7 @@ class TeleopIntake:
     latest: TeleopSample | None = None
     stop_reason: str = ""
     _counter: int = 0
+    _stream_open: bool = False
 
     def _reject(self, code: ErrorCode | str, message: str) -> None:
         raise MotionRejected(code, message)
@@ -92,15 +96,39 @@ class TeleopIntake:
             return None
         if self.last_tick_s is not None and now - self.last_tick_s < self.step_period_s:
             return None
-        self.last_tick_s = now if self.last_tick_s is None else self.last_tick_s + self.step_period_s
+        # Anchor on the actual tick time, not on a theoretical grid: adding the
+        # period each time accumulates drift and skips a step when the timer
+        # lands a few microseconds early.
+        self.last_tick_s = now
         try:
             command = self._step_command(now)
         except MotionRejected as exc:
             self.stop_reason = exc.code
             self.active = False
+            if self._stream_open:
+                self.stack.arbiter.finish(now)
+                self._stream_open = False
             return None
+        if self.streaming:
+            return self._stream_tick(command, now)
         result = self.stack.arbiter.execute(command, now)
         if result.outcome != "COMPLETED":
+            self.active = False
+            self.stop_reason = result.reason_code
+        return result
+
+    def _stream_tick(self, command: MotionCommand, now: float) -> MotionResult | None:
+        if not self._stream_open:
+            started = self.stack.arbiter.start(command, now)
+            if started is not None:
+                self.active = False
+                self.stop_reason = started.reason_code
+                return started
+            self._stream_open = True
+            return None
+        result = self.stack.arbiter.stream(command, now)
+        if result is not None:
+            self._stream_open = False
             self.active = False
             self.stop_reason = result.reason_code
         return result
@@ -139,14 +167,28 @@ class TeleopIntake:
         """Non-latching teleop session abort.
 
         The next step requires a fresh enable edge. An explicit safety stop
-        still uses MotionArbiter.stop() and latches.
+        still uses MotionArbiter.stop() and latches. An open stream session is
+        closed with ``finish`` so the arbiter clears its active motion without
+        latching.
         """
+        if self._stream_open:
+            self._stream_open = False
+            self.stack.arbiter.finish(self.stack.clock.now())
         self.active = False
         self.latest = None
         self.last_received_s = None
         self.stop_reason = reason
 
     def stop(self, reason: str, now: float | None = None) -> StopResult:
+        if self._stream_open:
+            # Leave the session to arbiter.stop; finishing first would record a
+            # COMPLETED result before the stop terminal.
+            self._stream_open = False
+            self.active = False
+            self.latest = None
+            self.last_received_s = None
+            self.stop_reason = reason
+            return self.stack.arbiter.stop("jcheng-teleop", reason, now)
         self.abort(reason)
         return self.stack.arbiter.stop("jcheng-teleop", reason, now)
 

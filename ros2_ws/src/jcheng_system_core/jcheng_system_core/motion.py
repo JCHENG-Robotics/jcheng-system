@@ -210,6 +210,86 @@ class MotionArbiter:
                 return result
         return None
 
+    def stream(self, command: MotionCommand, now: float | None = None) -> MotionResult | None:
+        """Publish one more frame into an active multi-joint stream.
+
+        The session is opened by ``start`` (which publishes the first frame) and
+        closed by ``finish``/``stop``. Every frame re-validates the lease,
+        stop latch, limits and rate; a rejected frame aborts the stream and
+        returns its terminal result. Returns None when the frame was published.
+        """
+        now = self._now(now)
+        with self._lock:
+            active = self._active
+            if active is None:
+                return self._rejected(
+                    command,
+                    ErrorCode.MOTION_BUSY.value,
+                    "no active stream",
+                    now,
+                )
+            if active.terminal is not None:
+                return active.terminal
+            try:
+                self._rate_limit(command.source, now)
+            except MotionRejected as exc:
+                return self._rejected(command, exc.code, exc.message, now)
+            report = self.validate(command, now)
+            if not report.approved:
+                message = (
+                    report.violations[0] if report.violations else "stream frame rejected"
+                )
+                if report.reason_code in {
+                    ErrorCode.NO_LEASE.value,
+                    ErrorCode.LEASE_REVOKED.value,
+                    ErrorCode.LEASE_EXPIRED.value,
+                }:
+                    self.safety.latch(report.reason_code, message)
+                result = self._complete_once(
+                    active,
+                    now,
+                    outcome="ABORTED",
+                    code=report.reason_code,
+                    message=message,
+                    bus_verified=False,
+                    calibration_invalidated=False,
+                    measured_positions=self.hardware.state(now).positions,
+                )
+                self._clear_active(active)
+                return result
+            if self.safety.stop_latched:
+                result = self._complete_once(
+                    active,
+                    now,
+                    outcome="ABORTED",
+                    code=ErrorCode.SAFETY_STOP_LATCHED.value,
+                    message="stop latched during stream",
+                    bus_verified=False,
+                    calibration_invalidated=False,
+                    measured_positions=self.hardware.state(now).positions,
+                )
+                self._clear_active(active)
+                return result
+            try:
+                self.hardware.publish(command, now)
+            except BusReadFailed as exc:
+                self.safety.latch(ErrorCode.MOTION_OUTCOME_UNKNOWN, str(exc))
+                result = self._complete_once(
+                    active,
+                    now,
+                    outcome="UNKNOWN",
+                    code=ErrorCode.MOTION_OUTCOME_UNKNOWN.value,
+                    message=str(exc),
+                    bus_verified=False,
+                    calibration_invalidated=False,
+                    measured_positions=self.hardware.state(now).positions,
+                )
+                self._clear_active(active)
+                return result
+            active.command = command
+            active.report = report
+            return None
+
     def finish(self, now: float | None = None) -> MotionResult | None:
         now = self._now(now)
         with self._lock:

@@ -8,6 +8,39 @@ All notable changes to this project are documented here. Format based on
 
 ### Added
 
+- M6 streaming runtime: `jcheng_runtime` accepts `streaming:=true` and builds
+  `TeleopIntake(streaming=True, step_period_s=0.05)`. The 20 Hz timer opens one
+  arbiter session, publishes frames with `stream` and closes on the neutral
+  frame. `tools/teleop_stream_probe.py` drives a 5-joint script; on the mock
+  stack all five joints moved ±0.33 rad, and through the domain-43 simulation
+  bridge they moved ±0.179 rad (plant lag), with no step warning or latch.
+  Evidence: `e2e/reports/20261127_streaming_runtime/`. Mock/simulation only; no
+  vendor write.
+- M6 streaming intake: `TeleopIntake(streaming=True)` opens one arbiter
+  session (`start`), publishes frames with `stream`, and closes on
+  deadman/timeout (`finish`) or explicit stop (latched). 20 Hz test: 10 atomic
+  frames, release clears without latching, lease revoke aborts/latches.
+  `tests/test_streaming_mock.py` (8 tests). Not wired into the ROS runtime.
+- M6 arbiter streaming session: `MotionArbiter.stream(command)` publishes
+  further frames into a session opened by `start` and closed by
+  `finish`/`stop`; every frame re-validates lease/stop/limits/rate, a rejected
+  frame aborts terminally, lease loss latches. `tests/test_streaming_arbiter.py`
+  (5 tests: frames→COMPLETED, lease revoke, stop, JOINT_LIMIT, no session).
+  Mock only; runtime/vendor supervisor not wired.
+- M6 atomic stream packing: `jcheng_hardware/streaming.py`
+  (`pack_arm_stream`) converts every arm joint to a pulse in mapping order and
+  rejects partial/extra/non-finite/out-of-range frames and durations outside
+  0.02–0.5 s; `VendorBridge.send_stream` publishes that frame in one
+  `ServosPosition` message. `tests/test_stream_pack.py` (10 tests). The
+  supervisor loop and vendor-stack exercise remain.
+- M6 mock streaming bridge: `jcheng_system_core/streaming.py`
+  (`MockStreamingBridge`) records one atomic multi-joint `StreamingFrame` per
+  `JOINT_STEP`/`HOME`, with tests for the full-joint frame, deadman release,
+  lease revoke, stop latch and a single-joint step that is not a stream.
+  `TeleopIntake.last_tick_s` now anchors on the actual tick time instead of
+  adding the period (drift/skip found by the cadence test). Evidence:
+  `e2e/reports/20261127_streaming_mock/`. Mock only; a runtime supervisor is
+  not wired and no vendor write has been made.
 - R5: `StopResult` now emits `confirmation` and `physical_stop`; the HTTP
   `StopResponse` carries them. A mock stop that completes an active session as
   `ABORTED` is `backend_confirmed`; an idle stop, or the vendor executor's
