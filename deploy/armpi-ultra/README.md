@@ -56,6 +56,37 @@ that `docker exec`s into the container:
 | `armpi-gateway.service` | read-only gateway on 8765 |
 | `armpi-gateway-pose.service` | pose/motion gateway on 8766 (manual start) |
 | `armpi-ext-cam.service` | retired UVC path, **disabled** |
+| `jcheng-system-readonly.service` | `jcheng_telemetry` `/v1` gateway on 8767, loopback only, `writes: 0` |
+
+`jcheng-system-readonly.service` is the R10 read-only surface, not the legacy
+`armpi_debug_gateway`. It serves `GET /v1/health`, `/v1/contract`, `/v1/state`,
+`/v1/battery`, `/v1/safety`, `/v1/topics`, `/v1/cameras`, `/v1/tf`,
+`/v1/events` and the `/v1/ws/state` WebSocket (101); every mutation path
+(`/v1/motion*`, `/v1/leases*`, `/v1/safety/*`) is rejected with 403 and
+`/v1/health` reports `writes: 0`. It binds `127.0.0.1`, so it is reachable from
+the robot only. Reach it from the operator laptop through an SSH tunnel (`ssh -N
+-L 8767:127.0.0.1:8767 pi@10.42.0.218`); do not widen the bind to expose it on
+the LAN. Install it with `install-readonly-gateway.sh`; the token lives in
+`/etc/jcheng-system/readonly.env` (0600) and is never committed.
+
+The unit runs a **prebuilt** workspace inside the container, selected by
+`JCHENG_WS` / `JCHENG_ROOT` in that env file (default
+`/home/ubuntu/jcheng-head/ros2_ws`, falling back to `/home/ubuntu/jcheng-m4`).
+Build it from a checkout at the pinned interfaces tag — the container already
+carries `jcheng_interfaces` v0.1.0 and the vendor `ros_robot_controller_msgs`:
+
+```bash
+docker cp <checkout>/. ArmPiUltra:/home/ubuntu/jcheng-head/
+docker exec -it ArmPiUltra bash -lc '
+  source /opt/ros/humble/setup.bash
+  cd /home/ubuntu/jcheng-head/ros2_ws
+  colcon build --packages-select jcheng_interfaces jcheng_system_core \
+      jcheng_hardware jcheng_telemetry'
+```
+
+`jcheng_interfaces` source is taken from the v0.1.0 tree already in the
+container (`/home/ubuntu/jcheng-m4/jcheng-interfaces`); the gateway refuses to
+serve a contract hash that differs from `configs/contract.yaml`.
 
 Consequences:
 
