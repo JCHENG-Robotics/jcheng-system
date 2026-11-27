@@ -30,7 +30,11 @@ from .executor import HardwareBridge, HardwareExecutor
 
 
 class VendorGatewayHardware:
-    """Adapt the M5.2 bridge to the read surface ``GatewayApp`` uses."""
+    """Adapt the M5.2 bridge to the executor and ``GatewayApp`` surfaces.
+
+    It is both the executor's ``HardwareBridge`` and the read object the HTTP
+    gateway uses, so a failed bus read is visible to ``/v1/safety/reset``.
+    """
 
     def __init__(self, bridge: HardwareBridge) -> None:
         self._bridge = bridge
@@ -41,17 +45,26 @@ class VendorGatewayHardware:
     def bus_failed(self) -> bool:
         return self._bus_failed
 
-    def state(self, now: float | None = None) -> Any:
-        return self._bridge.state()
+    def send_step(self, joint_name: str, target_rad: float, duration_s: float) -> int:
+        return self._bridge.send_step(joint_name, target_rad, duration_s)
 
-    def bus_read(self, now: float | None = None) -> Any:
+    def send_gripper(self, target_rad: float, duration_s: float) -> int:
+        return self._bridge.send_gripper(target_rad, duration_s)
+
+    def pulse_snapshot(self) -> dict[str, int]:
+        return self._bridge.pulse_snapshot()
+
+    def read_bus(self, timeout_s: float = 1.0) -> Any:
         try:
-            sample = self._bridge.read_bus()
+            sample = self._bridge.read_bus(timeout_s)
         except Exception:
             self._bus_failed = True
             raise
         self._bus_failed = False
-        return sample.state
+        return sample
+
+    def state(self, now: float | None = None) -> Any:
+        return self._bridge.state()
 
     def hold(self, now: float | None = None) -> None:
         self._bridge.hold()
@@ -111,7 +124,7 @@ class VendorStack:
             authority=authority,
             guard=guard,
             evidence=evidence,
-            bridge=bridge,
+            bridge=hardware,
             settle_s=settle_s,
         )
         return cls(

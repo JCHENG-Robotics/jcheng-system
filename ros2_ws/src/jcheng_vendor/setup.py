@@ -17,5 +17,10 @@ setup(
     description="Supervised vendor hardware runtime for M5.2 single-joint and gripper motion",
     license="Proprietary (license review pending)",
     tests_require=["pytest"],
-    entry_points={"console_scripts": ["jcheng_vendor_runtime = jcheng_vendor.node:main"]},
+    entry_points={
+        "console_scripts": [
+            "jcheng_vendor_runtime = jcheng_vendor.node:main",
+            "jcheng_gateway_vendor = jcheng_vendor.gateway_node:main",
+        ]
+    },
 )

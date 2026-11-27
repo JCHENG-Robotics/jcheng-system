@@ -68,9 +68,22 @@
   `mock`。
 
 离线测试 `tests/test_vendor_gateway_stack.py` 用假桥驱动
-`/v1/motion/execute` 到 bus-verified `COMPLETED`。仍缺少 ROS 进程（持有
-`VendorBridge`、0.25 s 总线轮询、`GatewayServer`、`arbiter.tick`）与实机
-C1–C5。
+`/v1/motion/execute` 到 bus-verified `COMPLETED`。
+
+ROS 进程 `jcheng_vendor/gateway_node.py`（R10，2026-11-27）实现：
+
+- 必须 `enable_motion:=true` 且提供 `JCHENG_GATEWAY_TOKEN`，否则拒绝启动；
+- 启动前先做一次总线读取，失败即拒绝启动；
+- 约 0.25 s 轮询总线并 `safety.update_state`；
+- `GatewayServer` 提供 `/v1`，`TickThread` 20 Hz 调 `arbiter.tick`；
+- `/safety_stop=true` 走 `HardwareExecutor.stop`；
+- launch：`jcheng_bringup/launch/gateway_vendor.launch.py`，token 只从环境
+  读取，host 默认回环，motion 默认关闭。
+
+节点已通过语法编译检查、离线组合测试，以及带真实厂商消息定义的 Humble
+构建（16 包，`pytest`/`tests_ros`/M5.2 gate 通过）；证据
+`e2e/reports/20261127_vendor_gateway_node/`。尚未对运行中的厂商栈启动，实机
+C1–C5 仍需单独授权。
 
 ## 2. 服务/action 名称（M5.1）
 
