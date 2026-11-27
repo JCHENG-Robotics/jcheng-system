@@ -377,10 +377,11 @@ class MotionArbiter:
             self.hardware.hold(now)
             self.hardware.zero_base(now)
             active = self._active
+            aborted = False
             if active is not None and active.terminal is None:
                 # The first terminal wins. A concurrent finish() sees it and
                 # returns it instead of writing COMPLETED.
-                self._complete_once(
+                terminal = self._complete_once(
                     active,
                     now,
                     outcome="ABORTED",
@@ -390,9 +391,13 @@ class MotionArbiter:
                     calibration_invalidated=False,
                     measured_positions=self.hardware.state(now).positions,
                 )
+                aborted = terminal.outcome == "ABORTED"
         return StopResult(
             accepted=True,
             safety=self.safety.current_state(),
             message="software stop requested; not an emergency stop",
             requested_at=now,
+            # S2 is only claimed when this stop completed an active session as
+            # ABORTED after the mock hold/zero calls returned.
+            confirmation="backend_confirmed" if aborted else "request_accepted",
         )
