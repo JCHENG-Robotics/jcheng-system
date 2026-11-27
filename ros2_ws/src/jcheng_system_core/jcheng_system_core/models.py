@@ -167,6 +167,9 @@ class MotionCommand:
     verify_bus: bool = True
     require_measured_state: bool = True
     expected_profile_hash: str = ""
+    # Optional holder assertion. When present, the hardware authority requires
+    # it to match the lease holder; legacy HTTP commands omit it.
+    holder: str = ""
 
     @classmethod
     def from_dict(cls, value: dict[str, Any]) -> "MotionCommand":
@@ -201,6 +204,7 @@ class MotionCommand:
             verify_bus=bool(value.get("verify_bus", True)),
             require_measured_state=bool(value.get("require_measured_state", True)),
             expected_profile_hash=str(value.get("expected_profile_hash", "")),
+            holder=str(value.get("holder", "")),
         )
 
     def to_dict(self, include_idempotency_key: bool = True) -> dict[str, Any]:
@@ -219,6 +223,8 @@ class MotionCommand:
         }
         if include_idempotency_key:
             data["idempotency_key"] = self.idempotency_key
+        if self.holder:
+            data["holder"] = self.holder
         if self.trajectory is not None:
             data["trajectory"] = self.trajectory.to_dict()
         if self.max_velocity_rad_s is not None:
@@ -260,6 +266,9 @@ class Lease:
     issued_at: float
     expires_at: float
     contract: ContractVersion
+    # 0 means deadman tracking is not enforced for this lease. A positive
+    # value is the maximum monotonic gap between heartbeats.
+    deadman_ms: int = 0
 
     def active(self, now: float) -> bool:
         return now < self.expires_at
@@ -272,6 +281,7 @@ class Lease:
             "mode": self.mode,
             "priority": self.priority,
             "deadman_required": self.deadman_required,
+            "deadman_ms": self.deadman_ms,
             "issued_at": clock.iso(self.issued_at),
             "expires_at": clock.iso(self.expires_at),
             "contract": self.contract.to_dict(),

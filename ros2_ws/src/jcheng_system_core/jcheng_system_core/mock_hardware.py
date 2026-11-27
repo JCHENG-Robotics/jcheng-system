@@ -91,6 +91,27 @@ class MockHardwareBridge:
         self.stamp = now
         self.fresh = True
 
+    def publish_motor_speeds(self, duty: list[float], now: float | None = None) -> None:
+        """Mock base speed write used by ``HardwareAuthority.submit_base``."""
+
+        now = self.clock.now() if now is None else now
+        if len(duty) != 4:
+            raise ValueError("mock motor speeds require four channels")
+        self.commands.append(
+            {
+                "kind": "SET_MOTOR_SPEEDS",
+                "duty": [float(value) for value in duty],
+                "at": now,
+                "publishers": sorted(self.publishers),
+            }
+        )
+        if self.bus_failed:
+            raise BusReadFailed("mock bus read failed on motor speed write")
+        self.base_duty = [float(value) for value in duty]
+        self.base_until = 0.0
+        self.stamp = now
+        self.fresh = True
+
     def _apply_joint_targets(self, names: list[str], targets: list[float]) -> None:
         index = {name: position for position, name in enumerate(self.profile.joint_names)}
         for name, target in zip(names, targets):
