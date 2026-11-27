@@ -116,10 +116,63 @@ Event behaviour:
 **not validated** as a safe stop latency on hardware. The mecanum mixer
 (`speed_scale_mps`, `track_half_width_m`) is also provisional.
 
-The base intake is **not wired** to a ROS node or HTTP route in this change;
+The base intake node is gated and disabled by default (section 4);
 `BaseConfig.enabled` defaults to `False`.
 
-## 4. Watchdog (`watchdog.py`)
+## 4. Provisional mobile base intake (`jcheng_base`, test-only)
+
+The thin node `ros2_ws/src/jcheng_base/jcheng_base/node.py` subscribes to
+`/jcheng/intent/base` and accepts the exact mobile provisional envelope from
+`mobile intent.py::to_dict`:
+
+```json
+{
+  "schema": "jcheng.mobile.base_intent.v1",
+  "lease_id": "lease-...",
+  "holder": "nav2",
+  "command_id": "cmd-...",
+  "seq": 1,
+  "stamp_ns": 1000000000,
+  "frame": "base_link",
+  "linear": {"x": 0.05, "y": 0.0},
+  "angular": {"z": 0.0},
+  "duty_limit": 1.0
+}
+```
+
+Rules:
+
+- `schema` must equal `jcheng.mobile.base_intent.v1`; any other schema is
+  rejected. This schema is the envelope version gate.
+- `frame` must be `base_link`.
+- `stamp_ns` is the mobile **monotonic** timestamp (not a header stamp),
+  compared with `time.monotonic_ns()` at receipt. The default freshness window
+  is 200 ms old / 50 ms in the future, configurable and **provisional**.
+- `linear`/`angular` must be objects with finite numeric `x`/`y` and `z`.
+- `duty_limit` is normalized to 0..1 and **clamped** (a negative value becomes
+  a stop/zero command). It scales the profile base duty cap.
+- `seq` must be a non-negative integer and strictly increase; duplicate/old
+  seq and duplicate command ids are rejected without a new output.
+- The envelope intentionally carries **no** `contract`, `deadman_ms`,
+  `source` or `max_duty_normalized`. The intake uses the locally deployed
+  contract; envelope-version incompatibility is expressed by `schema`.
+- Lease, holder, scope, deadman and stop-latch checks are still performed by
+  `BaseAuthority`; a stop latches and later envelopes are rejected.
+
+The node declares `enabled=false` by default, creates no launch file that
+enables it, and is not part of `deploy/`. When disabled or on a non-42 ROS
+domain it rejects messages with `DISABLED`/`WRONG_DOMAIN` and submits nothing.
+The node's default bridge is `UnavailableBaseBridge`, so it never fabricates a
+motor-speed frame: every desired write refuses with `HARDWARE_UNAVAILABLE`
+until a reviewed base bridge exists.
+
+This envelope is a **repo-local, test-only** format. It is **not** a
+`jcheng-interfaces` contract and must not be treated as one; adopting it
+requires an accepted interfaces proposal. The node also owns a process-local
+`LeaseManager`, so cross-process lease sharing with the vendor gateway is not
+implemented in this phase.
+
+## 5. Watchdog (`watchdog.py`)
 
 `HeartbeatWatchdog` is a pure core with an injected clock and an optional
 timeout callback. It does not depend on the upper execution loop: a separate
@@ -131,7 +184,7 @@ the trip.
 The watchdog is not yet installed as a systemd unit; `deploy/` is intentionally
 untouched.
 
-## 5. DDS ExecuteMotion gate (`vendor_gate.py`)
+## 6. DDS ExecuteMotion gate (`vendor_gate.py`)
 
 The DDS action is test-only and denied by default. The pure gate allows it
 only when all hold:
@@ -146,7 +199,7 @@ only when all hold:
 On denial the node logs the reason and leaves `_action_server = None`; the
 ActionServer code is retained for an explicitly authorized deployment.
 
-## 6. Stop responsibilities
+## 7. Stop responsibilities
 
 | Mechanism | Scope | Claim |
 |---|---|---|
@@ -161,7 +214,7 @@ ActionServer code is retained for an explicitly authorized deployment.
 It does **not** mean the chassis or arm physically stopped; `physical_stop`
 remains `unverified`.
 
-## 7. Tests (all offline)
+## 8. Tests (all offline)
 
 | File | Focus |
 |---|---|
@@ -170,10 +223,11 @@ remains `unverified`.
 | `tests/test_base_authority.py` | full base state machine and fault matrix, concurrency, restart, link loss, legacy intent |
 | `tests/test_watchdog.py` | trip latch, blocked upper loop, gateway-exit heartbeat loss, callback failure, base zero output |
 | `tests/test_dds_gate.py` | default deny, opt-in/domain/SROS2/topic, node wiring order |
+| `tests/test_base_intake.py` | exact mobile envelope accepted, flat/legacy rejected, lease/holder/scope, stamp freshness, seq, disabled/domain, stop priority, bad JSON, refusing sink, node default-off |
 
 No test starts ROS, DDS, a device, or a robot.
 
-## 8. Unverified / not covered
+## 9. Unverified / not covered
 
 - The 200 ms base intent timeout, 300 ms lease deadman default and the
   mecanum mixer are design values, not measured safety limits.
@@ -183,7 +237,10 @@ No test starts ROS, DDS, a device, or a robot.
   E-stop integration.
 - `VendorBridge` has no base motor-speed output yet; `submit_base` fails closed
   (`HARDWARE_UNAVAILABLE`) if the bridge lacks `publish_motor_speeds`.
-- Base intake is not wired to ROS/HTTP and is disabled by default.
+- The `jcheng_base` intake node is wired to ROS but disabled by default. Its
+  envelope is repo-local/test-only (not an interfaces contract), cross-process
+  lease sharing with the vendor gateway is not implemented, and no base
+  motor-speed bridge exists, so the node's sink refuses every desired write.
 - The watchdog core is not deployed as a unit; the Pi host/container placement
   decision is still open.
 - The DDS gate depends on the process environment; it is not an SROS2
@@ -198,10 +255,11 @@ No test starts ROS, DDS, a device, or a robot.
   hardware runtime is gated.
 - The Studio/mobile repos and `deploy/` were not changed.
 
-## 9. Rollout and rollback
+## 10. Rollout and rollback
 
-- Base intake: default `enabled=False`; enabling it is an explicit config
-  change and requires a base-capable bridge.
+- Base intake: default `enabled=False`; no launch file enables it. Enabling it
+  requires an explicit config change, a reviewed base bridge, and a lease
+  sharing decision.
 - DDS action: default denied; enabling requires the full env/SROS2/domain
   combination above.
 - Lease holder on HTTP renew/DELETE is a breaking client change; clients must

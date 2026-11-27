@@ -1,0 +1,12 @@
+{
+  "schema": "jcheng.mobile.base_intent.v1",
+  "lease_id": "lease-fixture",
+  "holder": "nav2",
+  "command_id": "cmd-fixture-0001",
+  "seq": 1,
+  "stamp_ns": 1000000000,
+  "frame": "base_link",
+  "linear": {"x": 0.05, "y": 0.0},
+  "angular": {"z": 0.0},
+  "duty_limit": 1.0
+}

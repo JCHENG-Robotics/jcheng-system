@@ -30,6 +30,18 @@ All notable changes to this project are documented here. Format based on
   `test_base_authority.py`, `test_watchdog.py`, `test_dds_gate.py`.
   `docs/AUTHORITY-HARDENING.md`. Offline only: no hardware, ROS, DDS or
   `deploy/` change; 200/300 ms values are provisional and unverified.
+- R11 base intake (offline): new `jcheng_base` package with a thin,
+  `enabled=false`-by-default node on `/jcheng/intent/base` (domain 42). It
+  accepts exactly the mobile provisional envelope
+  `jcheng.mobile.base_intent.v1` (`schema`, `lease_id`, `holder`,
+  `command_id`, `seq`, `stamp_ns`, `frame`, nested `linear`/`angular`,
+  `duty_limit`) and rejects unknown schema/frame, flat/legacy shapes, bad
+  JSON, stale/future `stamp_ns`, bad lease/holder/scope and latched stops.
+  `jcheng_system_core/base_intake.py` holds the ROS-free parser/gate; the
+  node's default `UnavailableBaseBridge` refuses every motor-speed write
+  instead of fabricating one. No launch file enables it and `deploy/` is
+  untouched. Tests: `tests/test_base_intake.py` (21). The envelope is
+  repo-local and test-only, not a `jcheng-interfaces` contract.
 - R10 hardware gateway deployment: `deploy/armpi-ultra` gains a
   `jcheng-gateway-vendor.service` unit, run script and installer for the
   hardware-backed `/v1` gateway on loopback 8766. The vendor gateway startup

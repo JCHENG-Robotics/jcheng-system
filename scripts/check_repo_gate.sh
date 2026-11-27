@@ -64,7 +64,8 @@ for pkg in \
   jcheng_telemetry \
   jcheng_runtime \
   jcheng_vendor \
-  jcheng_moveit
+  jcheng_moveit \
+  jcheng_base
 do
   require_file "ros2_ws/src/${pkg}/package.xml"
 done
@@ -92,4 +93,4 @@ if [[ "$fail" -ne 0 ]]; then
   echo "Repository gate FAILED" >&2
   exit 1
 fi
-echo "Repository gate OK: structure, 13 packages, no LICENSE, no secret material"
+echo "Repository gate OK: structure, 14 packages, no LICENSE, no secret material"

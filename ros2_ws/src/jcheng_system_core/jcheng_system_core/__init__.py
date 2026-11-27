@@ -16,6 +16,16 @@ from .base import (
     BaseStopOutcome,
     base_sink_writer,
 )
+from .base_intake import (
+    BASE_INTENT_DOMAIN_ID,
+    BASE_INTENT_SCHEMA,
+    BASE_INTENT_TOPIC,
+    BaseIntake,
+    BaseIntakeResult,
+    IntakeRejected,
+    UnavailableBaseBridge,
+    parse_base_intent,
+)
 from .config import ContractConfig, JointLimit, RobotProfile, load_contract
 from .errors import BusReadFailed, ErrorCode, MotionRejected
 from .evidence import EvidenceStore
@@ -39,7 +49,12 @@ __all__ = [
     "BaseCommand",
     "BaseConfig",
     "BaseDecision",
+    "BASE_INTENT_DOMAIN_ID",
+    "BASE_INTENT_SCHEMA",
+    "BASE_INTENT_TOPIC",
     "BaseIntent",
+    "BaseIntake",
+    "BaseIntakeResult",
     "BasePulse",
     "BaseStopOutcome",
     "BusReadFailed",
@@ -58,6 +73,7 @@ __all__ = [
     "HardwareDecision",
     "HeartbeatWatchdog",
     "IDLE",
+    "IntakeRejected",
     "JointLimit",
     "Lease",
     "LeaseCheck",
@@ -74,9 +90,11 @@ __all__ = [
     "SafetyLimits",
     "SafetySupervisor",
     "ScenarioResult",
+    "UnavailableBaseBridge",
     "base_sink_writer",
     "evaluate_dds_execute_gate",
     "load_contract",
+    "parse_base_intent",
     "run_all",
     "write_report",
 ]
