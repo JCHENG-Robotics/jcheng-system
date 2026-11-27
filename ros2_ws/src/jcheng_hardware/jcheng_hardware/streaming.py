@@ -2,7 +2,8 @@
 
 The vendor SDK accepts all servo id/position pairs in one packet
 (`ServosPosition`). This module converts a joint-name -> radians target map
-into that ordered pulse list without importing rclpy or publishing anything.
+into that ordered pulse list without importing any ROS transport or
+publishing anything.
 """
 
 from __future__ import annotations
