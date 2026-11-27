@@ -140,7 +140,7 @@ def test_timeout_callback_stops_the_base_output() -> None:
         mode="exclusive",
         priority=50,
         ttl_ms=30_000,
-        deadman_required=False,
+        deadman_required=True,
         contract=stack.version,
     )
     intent = BaseIntent(

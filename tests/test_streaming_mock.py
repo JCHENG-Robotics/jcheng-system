@@ -188,6 +188,7 @@ def test_single_joint_step_is_not_logged_as_a_stream_frame(root) -> None:
         intent_id="single-1",
         idempotency_key="single-key",
         lease_id=lease.lease_id,
+        holder="teleop",
         source="test",
         kind="JOINT_STEP",
         profile="step",

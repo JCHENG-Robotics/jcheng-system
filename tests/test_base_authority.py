@@ -79,7 +79,7 @@ def _setup(
         mode="exclusive",
         priority=50,
         ttl_ms=ttl_ms,
-        deadman_required=deadman_ms is not None,
+        deadman_required=True,
         contract=stack.version,
         deadman_ms=deadman_ms,
     )
@@ -316,6 +316,28 @@ def test_stop_latches_safety_and_zeroes_then_requires_reset() -> None:
     re_latched = base.submit(_intent(stack, lease.lease_id, seq=3), now=0.03)
     assert re_latched.accepted is False
     assert re_latched.code == ErrorCode.SAFETY_STOP_LATCHED.value
+    assert recorder.last.is_zero is True
+
+
+def test_tick_latches_on_the_shared_safety_stop_without_a_base_intent() -> None:
+    stack, base, recorder, _lease = _setup()
+    assert base.state == IDLE
+    stack.safety.latch(ErrorCode.SAFETY_STOP_LATCHED, "arm stop from shared safety")
+    decision = base.tick(0.0)
+    assert decision is not None
+    assert decision.accepted is False
+    assert decision.code == ErrorCode.SAFETY_STOP_LATCHED.value
+    assert base.state == STOP_LATCHED
+    assert recorder.last.is_zero is True
+
+
+def test_tick_zeroes_when_the_shared_safety_state_is_unknown() -> None:
+    stack, base, recorder, _lease = _setup()
+    stack.safety.state = "NOT_A_SAFETY_STATE"
+    decision = base.tick(0.0)
+    assert decision is not None
+    assert decision.code == ErrorCode.SAFETY_FAULT.value
+    assert base.state == STOP_LATCHED
     assert recorder.last.is_zero is True
 
 

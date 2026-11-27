@@ -78,7 +78,13 @@ class TeleopIntake:
         if not sample.deadman:
             self.abort("deadman_release")
             return
-        lease = self.stack.authority.check(sample.lease_id, "arm", now)
+        # The teleop sample predates the holder field; resolve the real holder
+        # from the lease so the generated command still asserts it. This is a
+        # legacy adapter, not an authorization bypass.
+        holder = self.stack.authority.holder_for(sample.lease_id)
+        lease = self.stack.authority.check(
+            sample.lease_id, "arm", now, holder=holder
+        )
         if not lease.ok:
             self._reject(lease.code, lease.message or "teleop lease is not valid")
         self.last_seq = sample.seq
@@ -145,10 +151,12 @@ class TeleopIntake:
             index = self.stack.profile.joint_order.index(name)
             targets.append(state.positions[index] + step)
         self._counter += 1
+        holder = self.stack.authority.holder_for(self.latest.lease_id) or ""
         return MotionCommand(
             intent_id=f"teleop-{self._counter:08d}",
             idempotency_key=f"teleop-{uuid.uuid4().hex}",
             lease_id=self.latest.lease_id,
+            holder=holder,
             source="jcheng-teleop",
             kind="JOINT_STEP",
             profile="pose",

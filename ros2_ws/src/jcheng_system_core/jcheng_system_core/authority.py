@@ -74,6 +74,7 @@ class LeaseView(Protocol):
         now: float | None = None,
         holder: str | None = None,
         touch: bool = False,
+        require_holder: bool | None = None,
     ) -> LeaseCheck: ...
 
 
@@ -84,12 +85,20 @@ class LeaseManager:
         clock: Clock,
         default_deadman_ms: int = DEFAULT_DEADMAN_MS,
         stop_hook: StopHook | None = None,
+        allow_deadman_opt_out: bool = False,
+        require_holder: bool = True,
     ) -> None:
         self.contract = contract
         self.clock = clock
         if not MIN_DEADMAN_MS <= int(default_deadman_ms) <= MAX_DEADMAN_MS:
             raise ValueError("default_deadman_ms outside bounds")
         self.default_deadman_ms = int(default_deadman_ms)
+        # Opt-out is a deliberate test/legacy configuration flag, not a
+        # default. Normal issuers require a deadman window.
+        self.allow_deadman_opt_out = bool(allow_deadman_opt_out)
+        # A motion check must assert the lease holder. Status/observability
+        # callers can opt out per call with require_holder=False.
+        self.require_holder = bool(require_holder)
         self._stop_hook = stop_hook
         self._lock = threading.RLock()
         self._leases: dict[str, Lease] = {}
@@ -155,7 +164,7 @@ class LeaseManager:
         mode: str,
         priority: int,
         ttl_ms: int,
-        deadman_required: bool,
+        deadman_required: bool | None,
         contract: ContractVersion,
         now: float | None = None,
         deadman_ms: int | None = None,
@@ -172,8 +181,11 @@ class LeaseManager:
             raise MotionRejected(ErrorCode.INVALID_COMMAND, "priority must be 0..255")
         if not MIN_TTL_MS <= int(ttl_ms) <= MAX_TTL_MS:
             raise MotionRejected(ErrorCode.INVALID_COMMAND, "ttl_ms outside bounds")
+        # None means "use the secure default" (required). An explicit False is
+        # an opt-out only when the manager was deliberately configured for it.
+        required = True if deadman_required is None else bool(deadman_required)
         if deadman_ms is None:
-            effective_deadman = self.default_deadman_ms if deadman_required else 0
+            effective_deadman = self.default_deadman_ms if required else 0
         else:
             effective_deadman = int(deadman_ms)
             if effective_deadman != 0 and not (
@@ -182,11 +194,17 @@ class LeaseManager:
                 raise MotionRejected(
                     ErrorCode.INVALID_COMMAND, "deadman_ms outside bounds"
                 )
-        if deadman_required and effective_deadman <= 0:
-            raise MotionRejected(
-                ErrorCode.INVALID_COMMAND,
-                "deadman_ms is required when deadman_required is set",
-            )
+        if effective_deadman <= 0:
+            if required:
+                raise MotionRejected(
+                    ErrorCode.INVALID_COMMAND,
+                    "deadman_ms=0 is not allowed when deadman is required",
+                )
+            if not self.allow_deadman_opt_out:
+                raise MotionRejected(
+                    ErrorCode.INVALID_COMMAND,
+                    "deadman opt-out requires allow_deadman_opt_out=True",
+                )
 
         self.expire(now)
         for existing in list(self._leases.values()):
@@ -213,7 +231,7 @@ class LeaseManager:
             scope=scope,
             mode="exclusive",
             priority=int(priority),
-            deadman_required=bool(deadman_required),
+            deadman_required=effective_deadman > 0,
             issued_at=now,
             expires_at=now + int(ttl_ms) / 1000.0,
             contract=contract,
@@ -233,6 +251,13 @@ class LeaseManager:
             scope=scope,
             deadman_ms=lease.deadman_ms,
         )
+        if lease.deadman_ms == 0:
+            self._emit(
+                "lease_deadman_opt_out",
+                lease_id=lease.lease_id,
+                holder=holder,
+                operator="config",
+            )
         return lease
 
     @_locked
@@ -370,10 +395,17 @@ class LeaseManager:
         now: float | None = None,
         holder: str | None = None,
         touch: bool = False,
+        require_holder: bool | None = None,
     ) -> LeaseCheck:
         """Validate a lease for a motion scope.
 
-        ``holder`` is optional for legacy callers that only carry a lease id.
+        Motion callers must assert the holder. By default (``require_holder``
+        None) the manager-level ``require_holder`` flag applies; a missing
+        holder is rejected with ``NOT_LEASE_HOLDER`` rather than skipping the
+        check. Only an explicitly configured legacy manager
+        (``require_holder=False``) or a status/observability caller that passes
+        ``require_holder=False`` may omit it.
+
         ``touch`` refreshes the deadman after a successful check; motion paths
         set it because an accepted command is proof of holder liveness.
         """
@@ -389,6 +421,14 @@ class LeaseManager:
         if not lease.active(now):
             self._expire_locked(lease_id, lease)
             return LeaseCheck(False, ErrorCode.LEASE_EXPIRED.value, None, "lease has expired")
+        effective_require = self.require_holder if require_holder is None else bool(require_holder)
+        if effective_require and (holder is None or not str(holder).strip()):
+            return LeaseCheck(
+                False,
+                ErrorCode.NOT_LEASE_HOLDER.value,
+                lease,
+                "holder is required for a motion check",
+            )
         if holder is not None and str(holder) != lease.holder:
             return LeaseCheck(
                 False,
@@ -427,6 +467,18 @@ class LeaseManager:
                 return lease
         return None
 
+    @_locked
+    def holder_for(self, lease_id: str) -> str | None:
+        """Return the recorded holder for a lease id, without a motion check.
+
+        This is for internal legacy adapters (for example teleop) that must
+        assert the real holder on a generated command; it is not an
+        authorization check.
+        """
+
+        lease = self._leases.get(lease_id)
+        return lease.holder if lease is not None else None
+
 
 class GatewayLeaseView:
     """Lease view over the *same* ``LeaseManager`` the gateway uses.
@@ -454,9 +506,15 @@ class GatewayLeaseView:
         now: float | None = None,
         holder: str | None = None,
         touch: bool = False,
+        require_holder: bool | None = None,
     ) -> LeaseCheck:
         return self._manager.check(
-            lease_id, scope, now=now, holder=holder, touch=touch
+            lease_id,
+            scope,
+            now=now,
+            holder=holder,
+            touch=touch,
+            require_holder=require_holder,
         )
 
     def note_heartbeat(
@@ -499,6 +557,7 @@ class RejectAllLeaseView:
         now: float | None = None,
         holder: str | None = None,
         touch: bool = False,
+        require_holder: bool | None = None,
     ) -> LeaseCheck:
         return LeaseCheck(False, ErrorCode.NO_LEASE.value, None, self.reason)
 

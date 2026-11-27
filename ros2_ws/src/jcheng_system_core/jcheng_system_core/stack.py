@@ -39,6 +39,8 @@ class MockStack:
         evidence_path: str | Path | None = None,
         hardware: MockHardwareBridge | None = None,
         robot: str = "armpi_ultra",
+        allow_deadman_opt_out: bool = False,
+        require_holder: bool = True,
     ) -> "MockStack":
         root = Path(root)
         clock = clock or Clock()
@@ -50,7 +52,12 @@ class MockStack:
         overlay = profile_dir / "safety_overlay.yaml"
         limits = SafetyLimits.from_file(overlay) if overlay.is_file() else SafetyLimits()
         safety = SafetySupervisor(profile, contract.version, clock, limits)
-        authority = LeaseManager(contract.version, clock)
+        authority = LeaseManager(
+            contract.version,
+            clock,
+            allow_deadman_opt_out=allow_deadman_opt_out,
+            require_holder=require_holder,
+        )
         hardware = hardware or MockHardwareBridge(profile, clock)
         guard = PublisherGuard()
         evidence = EvidenceStore(clock, evidence_path)
@@ -99,7 +106,7 @@ class MockStack:
         scope: str = "full",
         priority: int = 100,
         ttl_ms: int = 30_000,
-        deadman_required: bool = False,
+        deadman_required: bool | None = True,
     ):
         return self.authority.acquire(
             holder=holder,
@@ -112,10 +119,14 @@ class MockStack:
         )
 
     def command(self, lease_id: str | None = None, **overrides):
+        holder = overrides.pop("holder", None)
+        if holder is None and lease_id:
+            holder = self.authority.holder_for(lease_id) or ""
         base = {
             "intent_id": f"intent-{uuid.uuid4().hex[:8]}",
             "idempotency_key": f"idem-{uuid.uuid4().hex[:8]}",
             "lease_id": lease_id or "",
+            "holder": holder or "",
             "source": "jcheng_mock",
             "kind": "JOINT_STEP",
             "profile": "step",

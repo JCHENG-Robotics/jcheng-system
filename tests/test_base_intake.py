@@ -136,7 +136,7 @@ def _setup(
         mode="exclusive",
         priority=50,
         ttl_ms=ttl_ms,
-        deadman_required=False,
+        deadman_required=True,
         contract=stack.version,
     )
     intake = BaseIntake(
@@ -441,7 +441,7 @@ def test_refusing_sink_does_not_fabricate_a_base_output() -> None:
         mode="exclusive",
         priority=50,
         ttl_ms=30_000,
-        deadman_required=False,
+        deadman_required=True,
         contract=stack.version,
     )
     intake = BaseIntake(
@@ -479,7 +479,7 @@ def _base_lease(stack: MockStack):
         mode="exclusive",
         priority=50,
         ttl_ms=30_000,
-        deadman_required=False,
+        deadman_required=True,
         contract=stack.version,
     )
 
@@ -512,11 +512,16 @@ def test_separate_manager_lease_is_rejected() -> None:
         mode="exclusive",
         priority=50,
         ttl_ms=30_000,
-        deadman_required=False,
+        deadman_required=True,
         contract=stack.version,
     )
-    assert other.check(foreign.lease_id, "base").ok is True
-    assert stack.authority.check(foreign.lease_id, "base").code == ErrorCode.NO_LEASE.value
+    assert other.check(foreign.lease_id, "base", holder="nav2").ok is True
+    assert (
+        stack.authority.check(
+            foreign.lease_id, "base", holder="nav2", require_holder=False
+        ).code
+        == ErrorCode.NO_LEASE.value
+    )
 
     result = _handle(intake, _envelope(foreign.lease_id))
     assert result.accepted is False

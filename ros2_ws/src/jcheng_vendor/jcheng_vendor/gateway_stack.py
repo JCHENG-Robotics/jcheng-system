@@ -105,6 +105,8 @@ class VendorStack:
         evidence_path: str | Path | None = None,
         robot: str = "armpi_ultra",
         settle_s: float = 0.4,
+        allow_deadman_opt_out: bool = False,
+        require_holder: bool = True,
     ) -> "VendorStack":
         root = Path(root)
         clock = clock or Clock()
@@ -114,7 +116,12 @@ class VendorStack:
         overlay = profile_dir / "safety_overlay.yaml"
         limits = SafetyLimits.from_file(overlay) if overlay.is_file() else SafetyLimits()
         safety = SafetySupervisor(profile, contract.version, clock, limits)
-        authority = LeaseManager(contract.version, clock)
+        authority = LeaseManager(
+            contract.version,
+            clock,
+            allow_deadman_opt_out=allow_deadman_opt_out,
+            require_holder=require_holder,
+        )
         guard = PublisherGuard()
         evidence = EvidenceStore(clock, evidence_path)
         hardware = VendorGatewayHardware(bridge)
@@ -180,7 +187,7 @@ class VendorStack:
         scope: str = "arm",
         priority: int = 100,
         ttl_ms: int = 30_000,
-        deadman_required: bool = False,
+        deadman_required: bool | None = True,
     ):
         return self.authority.acquire(
             holder=holder,
@@ -193,10 +200,14 @@ class VendorStack:
         )
 
     def command(self, lease_id: str | None = None, **overrides: Any) -> MotionCommand:
+        holder = overrides.pop("holder", None)
+        if holder is None and lease_id:
+            holder = self.authority.holder_for(lease_id) or ""
         base = {
             "intent_id": f"intent-{uuid.uuid4().hex[:8]}",
             "idempotency_key": f"idem-{uuid.uuid4().hex[:8]}",
             "lease_id": lease_id or "",
+            "holder": holder or "",
             "source": "jcheng_vendor_gateway",
             "kind": "JOINT_STEP",
             "profile": "step",

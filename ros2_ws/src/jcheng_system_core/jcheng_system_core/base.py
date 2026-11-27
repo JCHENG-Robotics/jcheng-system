@@ -52,6 +52,9 @@ MOVING = "MOVING"
 STOP_LATCHED = "STOP_LATCHED"
 FAULT = "FAULT"
 KNOWN_STATES = {DISABLED, IDLE, ARMED, MOVING, STOP_LATCHED, FAULT}
+# Mirrors the safety supervisor states; an unknown value is treated as a
+# fault and latches the base on the next tick.
+KNOWN_SAFETY_STATES = {"DISARMED", "ARMED_IDLE", "MOTION_ACTIVE", "STOP_LATCHED"}
 
 
 def _finite(value: Any) -> bool:
@@ -349,12 +352,26 @@ class BaseAuthority:
                     False, ErrorCode.SAFETY_FAULT.value, self.state,
                     "base intake is in fault", BaseCommand.zero(),
                 )
-            if self.safety is not None and self.safety.stop_latched:
-                self._latch(ErrorCode.SAFETY_STOP_LATCHED.value, "safety stop is latched")
-                return BaseDecision(
-                    False, ErrorCode.SAFETY_STOP_LATCHED.value, self.state,
-                    "safety stop is latched", BaseCommand.zero(),
-                )
+            if self.safety is not None:
+                safety_state = getattr(self.safety, "state", "")
+                if self.safety.stop_latched or safety_state == "STOP_LATCHED":
+                    self._latch(
+                        ErrorCode.SAFETY_STOP_LATCHED.value, "safety stop is latched"
+                    )
+                    return BaseDecision(
+                        False, ErrorCode.SAFETY_STOP_LATCHED.value, self.state,
+                        "safety stop is latched", BaseCommand.zero(),
+                    )
+                if safety_state not in KNOWN_SAFETY_STATES:
+                    self._latch(
+                        ErrorCode.SAFETY_FAULT.value,
+                        f"unknown shared safety state {safety_state!r}",
+                    )
+                    return BaseDecision(
+                        False, ErrorCode.SAFETY_FAULT.value, self.state,
+                        f"unknown shared safety state {safety_state!r}",
+                        BaseCommand.zero(),
+                    )
             problem = self._validate_intent(intent)
             if problem:
                 if self.state == MOVING:
@@ -422,6 +439,34 @@ class BaseAuthority:
             if self.state in (DISABLED, STOP_LATCHED, FAULT):
                 self._zero("terminal_state")
                 return None
+            # The base shares the system safety latch: an arm stop/fault must
+            # zero the base even when no base intent is currently active.
+            if self.safety is not None:
+                safety_state = getattr(self.safety, "state", "")
+                if self.safety.stop_latched or safety_state == "STOP_LATCHED":
+                    self._latch(
+                        ErrorCode.SAFETY_STOP_LATCHED.value,
+                        "shared safety stop is latched",
+                    )
+                    return BaseDecision(
+                        False,
+                        ErrorCode.SAFETY_STOP_LATCHED.value,
+                        self.state,
+                        "shared safety stop is latched; base output is zero",
+                        BaseCommand.zero(),
+                    )
+                if safety_state not in KNOWN_SAFETY_STATES:
+                    self._latch(
+                        ErrorCode.SAFETY_FAULT.value,
+                        f"unknown shared safety state {safety_state!r}",
+                    )
+                    return BaseDecision(
+                        False,
+                        ErrorCode.SAFETY_FAULT.value,
+                        self.state,
+                        f"unknown shared safety state {safety_state!r}",
+                        BaseCommand.zero(),
+                    )
             intent = self.last_intent
             if intent is None:
                 return None

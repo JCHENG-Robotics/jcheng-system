@@ -75,6 +75,7 @@ def _setup(
     ttl_ms: int = 30_000,
     deadman_ms: int | None = None,
     holder: str = "operator",
+    require_holder: bool = True,
 ):
     profile = _profile()
     contract = _contract()
@@ -96,14 +97,16 @@ def _setup(
         contract=contract.version,
         profile_hash=profile.profile_hash,
     )
-    authority = LeaseManager(contract.version, clock)
+    authority = LeaseManager(
+        contract.version, clock, require_holder=require_holder
+    )
     lease = authority.acquire(
         holder=holder,
         scope=scope,
         mode="exclusive",
         priority=100,
         ttl_ms=ttl_ms,
-        deadman_required=deadman_ms is not None,
+        deadman_required=True,
         contract=contract.version,
         deadman_ms=deadman_ms,
     )
@@ -120,7 +123,7 @@ def _setup(
     return clock, bridge, safety, authority, lease, hardware, contract.version
 
 
-def _command(contract: ContractVersion, lease_id: str, *, holder: str = "") -> MotionCommand:
+def _command(contract: ContractVersion, lease_id: str, *, holder: str = "operator") -> MotionCommand:
     payload = {
         "intent_id": "intent-hw",
         "idempotency_key": "idem-hw",
@@ -187,6 +190,20 @@ def test_wrong_holder_is_rejected_before_any_write() -> None:
         hardware.execute_arm(_command(contract, lease.lease_id, holder="intruder"))
     assert exc.value.code == ErrorCode.NOT_LEASE_HOLDER.value
     assert bridge.arm_writes == []
+
+
+def test_missing_holder_is_rejected_before_any_write() -> None:
+    _, bridge, _, _, lease, hardware, contract = _setup()
+    with pytest.raises(MotionRejected) as exc:
+        hardware.execute_arm(_command(contract, lease.lease_id, holder=""))
+    assert exc.value.code == ErrorCode.NOT_LEASE_HOLDER.value
+    assert bridge.arm_writes == []
+
+
+def test_holder_legacy_opt_out_requires_the_manager_flag() -> None:
+    _, bridge, _, _, lease, hardware, contract = _setup(require_holder=False)
+    assert hardware.execute_arm(_command(contract, lease.lease_id, holder="")) == 500
+    assert bridge.arm_writes == [("joint1", 0.05, 1.0)]
 
 
 def test_wrong_scope_is_rejected_before_any_write() -> None:
@@ -337,7 +354,7 @@ def test_missing_bridge_fails_closed() -> None:
         mode="exclusive",
         priority=100,
         ttl_ms=10_000,
-        deadman_required=False,
+        deadman_required=True,
         contract=contract.version,
     )
     hardware = HardwareAuthority(

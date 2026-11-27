@@ -215,10 +215,12 @@ All notable changes to this project are documented here. Format based on
 
 ### Changed
 
-- R11 breaking client change: `DELETE /v1/leases/{id}` and
-  `POST /v1/leases/{id}/renew` require `holder` or `client_id` (body or query);
-  missing or mismatched holders return 403. Stop responses and motion success
-  payloads are unchanged.
+- R11 breaking client changes: `POST /v1/leases` defaults to
+  `deadman_required=true` and rejects an explicit false unless the server
+  opted out; `POST /v1/motion/execute` requires a `holder` matching the lease;
+  `DELETE /v1/leases/{id}` and `POST /v1/leases/{id}/renew` require `holder` or
+  `client_id` (body or query). Missing/mismatched holders return 403/422 as
+  applicable. Stop responses and motion success payloads are unchanged.
 - M4/M5 motion target (2026-11-26): the `jcheng_system_core` gateway with the
   M5.2 `jcheng_vendor` hardware executor. The frozen `armpi_debug_gateway` is
   legacy and not the motion authority; its R7 race is recorded but not fixed.
@@ -251,6 +253,15 @@ All notable changes to this project are documented here. Format based on
 
 ### Fixed
 
+- R11 QA authority gaps: lease issuing now requires deadman by default
+  (`deadman_required=true`, 300 ms provisional; `deadman_ms=0` rejected), with
+  opt-out only through `allow_deadman_opt_out=True`; motion checks reject a
+  missing holder with `NOT_LEASE_HOLDER` (legacy only through
+  `require_holder=False`); the vendor node gates all `/jcheng/authority/*`
+  services and `/jcheng/safety/arm|disarm|reset` behind the same
+  `vendor_gate` as `ExecuteMotion` (read-only validate/get_state/capabilities
+  remain); `BaseAuthority.tick` now zeroes and latches when the shared safety
+  stop or an unknown safety state is seen, even without a base intent.
 - R11 base intake unified lease: `BaseIntake` no longer accepts a second
   process-local lease authority. It requires an injected `LeaseView` (or an
   existing `BaseAuthority` whose view it reuses); `GatewayLeaseView` delegates

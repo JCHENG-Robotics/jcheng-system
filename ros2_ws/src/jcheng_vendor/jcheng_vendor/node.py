@@ -54,6 +54,7 @@ from jcheng_system_core.safety import SafetyLimits, SafetySupervisor
 from jcheng_system_core.timebase import Clock
 from jcheng_system_core.vendor_gate import (
     DDS_ACTION_TOPIC,
+    PRIVILEGED_DDS_SERVICES,
     evaluate_dds_execute_gate,
 )
 
@@ -68,6 +69,9 @@ class VendorRuntimeNode(Node):
         self.declare_parameter("evidence_path", "")
         self.declare_parameter("bus_service", "/ros_robot_controller/bus_servo/get_state")
         self.declare_parameter("command_topic", "/servo_controller")
+        # Secure defaults; both opt-outs are deliberate deployment/test flags.
+        self.declare_parameter("allow_deadman_opt_out", False)
+        self.declare_parameter("require_holder", True)
         root_value = str(self.get_parameter("root").value or os.environ.get("JCHENG_ROOT", ""))
         self.root = Path(root_value).expanduser() if root_value else find_repo_root()
         self.profile = RobotProfile.from_file(
@@ -82,7 +86,14 @@ class VendorRuntimeNode(Node):
             self.root / "configs" / "robots" / "armpi_ultra" / "safety_overlay.yaml"
         )
         self.safety = SafetySupervisor(self.profile, self.contract.version, self.clock, limits)
-        self.authority = LeaseManager(self.contract.version, self.clock)
+        self.authority = LeaseManager(
+            self.contract.version,
+            self.clock,
+            allow_deadman_opt_out=bool(
+                self.get_parameter("allow_deadman_opt_out").value
+            ),
+            require_holder=bool(self.get_parameter("require_holder").value),
+        )
         evidence_path = str(self.get_parameter("evidence_path").value or "") or None
         self.evidence = EvidenceStore(self.clock, evidence_path)
         self.bridge = VendorBridge(
@@ -128,30 +139,35 @@ class VendorRuntimeNode(Node):
         self._safety_pub = self.create_publisher(
             SafetyState, "/jcheng/telemetry/safety", 10
         )
+        # The privileged DDS surface (authority services, arm/disarm/reset and
+        # ExecuteMotion) shares one startup gate. HTTP /v1/motion/* remains
+        # the only external entry; denial leaves the code paths intact but
+        # unadvertised.
+        self.dds_execute_gate = evaluate_dds_execute_gate(topic=DDS_ACTION_TOPIC)
 
-        self.create_service(
+        self._create_privileged_service(
             AcquireLease,
             "/jcheng/authority/acquire_lease",
             self._acquire,
-            callback_group=callback_group,
+            callback_group,
         )
-        self.create_service(
+        self._create_privileged_service(
             RenewLease,
             "/jcheng/authority/renew_lease",
             self._renew,
-            callback_group=callback_group,
+            callback_group,
         )
-        self.create_service(
+        self._create_privileged_service(
             ReleaseLease,
             "/jcheng/authority/release_lease",
             self._release,
-            callback_group=callback_group,
+            callback_group,
         )
-        self.create_service(
+        self._create_privileged_service(
             RevokeLease,
             "/jcheng/authority/revoke_lease",
             self._revoke,
-            callback_group=callback_group,
+            callback_group,
         )
         self.create_service(
             ValidateMotion,
@@ -165,23 +181,23 @@ class VendorRuntimeNode(Node):
             self._get_safety,
             callback_group=callback_group,
         )
-        self.create_service(
+        self._create_privileged_service(
             ArmSystem,
             "/jcheng/safety/arm",
             self._arm,
-            callback_group=callback_group,
+            callback_group,
         )
-        self.create_service(
+        self._create_privileged_service(
             DisarmSystem,
             "/jcheng/safety/disarm",
             self._disarm,
-            callback_group=callback_group,
+            callback_group,
         )
-        self.create_service(
+        self._create_privileged_service(
             ResetSafety,
             "/jcheng/safety/reset",
             self._reset,
-            callback_group=callback_group,
+            callback_group,
         )
         self.create_service(
             GetCapabilities,
@@ -189,11 +205,6 @@ class VendorRuntimeNode(Node):
             self._capabilities,
             callback_group=callback_group,
         )
-        # DDS ExecuteMotion is test-only and disabled by default. HTTP
-        # /v1/motion/* remains the only external entry. The gate is checked
-        # before the ActionServer is created; denial leaves the C++/Python
-        # action plumbing intact but unadvertised.
-        self.dds_execute_gate = evaluate_dds_execute_gate(topic=DDS_ACTION_TOPIC)
         if self.dds_execute_gate.allowed:
             self._action_server = ActionServer(
                 self,
@@ -207,8 +218,10 @@ class VendorRuntimeNode(Node):
         else:
             self._action_server = None
             self.get_logger().warning(
-                "DDS ExecuteMotion ActionServer disabled: "
-                f"{self.dds_execute_gate.code}: {self.dds_execute_gate.message}"
+                "privileged DDS surface disabled "
+                f"({len(PRIVILEGED_DDS_SERVICES)} authority/safety services + "
+                f"ExecuteMotion): {self.dds_execute_gate.code}: "
+                f"{self.dds_execute_gate.message}"
             )
         self.create_subscription(
             Bool,
@@ -222,6 +235,15 @@ class VendorRuntimeNode(Node):
         self._initial_timer = self.create_timer(0.5, self._initial_poll_once, callback_group=callback_group)
         self.get_logger().info(
             "M5.2 vendor runtime started: only JOINT_STEP/GRIPPER; stop latches and holds"
+        )
+
+    def _create_privileged_service(self, srv_type, name, handler, callback_group):
+        """Create an authority/safety service only when the DDS gate allows."""
+
+        if not self.dds_execute_gate.allowed:
+            return None
+        return self.create_service(
+            srv_type, name, handler, callback_group=callback_group
         )
 
     def _initial_poll_once(self) -> None:

@@ -46,7 +46,11 @@ from .safety import SafetyLimits, SafetySupervisor
 from .scenarios import ScenarioResult, run_all, write_report
 from .stack import MockStack
 from .timebase import Clock, ManualClock
-from .vendor_gate import DdsGateResult, evaluate_dds_execute_gate
+from .vendor_gate import (
+    PRIVILEGED_DDS_SERVICES,
+    DdsGateResult,
+    evaluate_dds_execute_gate,
+)
 from .watchdog import HeartbeatWatchdog
 
 __all__ = [
@@ -70,6 +74,7 @@ __all__ = [
     "ContractVersion",
     "DISABLED",
     "DdsGateResult",
+    "PRIVILEGED_DDS_SERVICES",
     "ErrorCode",
     "EvidenceStore",
     "FAULT",

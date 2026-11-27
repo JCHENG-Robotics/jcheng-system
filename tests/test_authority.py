@@ -11,14 +11,20 @@ def test_lease_preempts_lower_priority(root: Path) -> None:
     stack = MockStack.build(root, clock=ManualClock())
     low = stack.lease(holder="low", scope="arm", priority=40)
     high = stack.lease(holder="high", scope="arm", priority=60)
-    assert not stack.authority.check(low.lease_id, "arm", stack.clock.now()).ok
-    assert stack.authority.check(high.lease_id, "arm", stack.clock.now()).ok
+    assert not stack.authority.check(
+        low.lease_id, "arm", stack.clock.now(), holder="low"
+    ).ok
+    assert stack.authority.check(
+        high.lease_id, "arm", stack.clock.now(), holder="high"
+    ).ok
 
 
 def test_scope_mismatch_rejected(root: Path) -> None:
     stack = MockStack.build(root, clock=ManualClock())
     lease = stack.lease(holder="arm", scope="arm", priority=60)
-    check = stack.authority.check(lease.lease_id, "base", stack.clock.now())
+    check = stack.authority.check(
+        lease.lease_id, "base", stack.clock.now(), holder="arm"
+    )
     assert not check.ok
     assert check.code == ErrorCode.NOT_LEASE_HOLDER.value
 
@@ -27,6 +33,8 @@ def test_lease_expiry(root: Path) -> None:
     stack = MockStack.build(root, clock=ManualClock())
     lease = stack.lease(holder="short", scope="arm", priority=60, ttl_ms=100)
     stack.clock.advance(0.2)
-    check = stack.authority.check(lease.lease_id, "arm", stack.clock.now())
+    check = stack.authority.check(
+        lease.lease_id, "arm", stack.clock.now(), holder="short"
+    )
     assert not check.ok
     assert check.code == ErrorCode.LEASE_EXPIRED.value

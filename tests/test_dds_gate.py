@@ -16,6 +16,7 @@ from jcheng_system_core.vendor_gate import (
     DDS_ACTION_TOPIC,
     ENV_NOT_ONE,
     INVALID_DOMAIN,
+    PRIVILEGED_DDS_SERVICES,
     SROS2_MISSING,
     WRONG_DOMAIN,
     WRONG_TOPIC,
@@ -117,3 +118,35 @@ def test_vendor_node_checks_the_gate_before_the_action_server() -> None:
     assert "ActionServer(" in source
     assert "self._action_server = None" in source
     assert source.index("evaluate_dds_execute_gate(") < source.index("ActionServer(")
+
+
+def test_privileged_service_surface_is_the_expected_set() -> None:
+    assert set(PRIVILEGED_DDS_SERVICES) == {
+        "/jcheng/authority/acquire_lease",
+        "/jcheng/authority/renew_lease",
+        "/jcheng/authority/release_lease",
+        "/jcheng/authority/revoke_lease",
+        "/jcheng/safety/arm",
+        "/jcheng/safety/disarm",
+        "/jcheng/safety/reset",
+    }
+    # The same gate decision covers the services and the action.
+    assert evaluate_dds_execute_gate({}).allowed is False
+    assert evaluate_dds_execute_gate(FULL_ENV).allowed is True
+
+
+def test_vendor_node_gates_each_privileged_service_before_creation() -> None:
+    source = (
+        ROOT / "ros2_ws" / "src" / "jcheng_vendor" / "jcheng_vendor" / "node.py"
+    ).read_text(encoding="utf-8")
+    gate_index = source.index("evaluate_dds_execute_gate(")
+    for name in PRIVILEGED_DDS_SERVICES:
+        index = source.index(name)
+        assert index > gate_index, name
+        window = source[max(0, index - 240): index]
+        assert "_create_privileged_service(" in window, name
+    assert source.count("_create_privileged_service(") >= len(PRIVILEGED_DDS_SERVICES) + 1
+    assert "PRIVILEGED_DDS_SERVICES" in source
+    # The ActionServer remains present and is created only when allowed.
+    assert "self._action_server = ActionServer(" in source
+    assert "if self.dds_execute_gate.allowed:" in source

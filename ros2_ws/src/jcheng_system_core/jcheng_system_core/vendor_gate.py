@@ -25,6 +25,18 @@ ALLOW_ENV = "JCHENG_ALLOW_DDS_EXECUTE"
 PRIVILEGED_DOMAIN_ID = 41
 DDS_ACTION_TOPIC = "/jcheng/motion/execute"
 
+# Privileged services that share the same gate as the ExecuteMotion action.
+# Read-only validate/get_state/capabilities are not part of this surface.
+PRIVILEGED_DDS_SERVICES = (
+    "/jcheng/authority/acquire_lease",
+    "/jcheng/authority/renew_lease",
+    "/jcheng/authority/release_lease",
+    "/jcheng/authority/revoke_lease",
+    "/jcheng/safety/arm",
+    "/jcheng/safety/disarm",
+    "/jcheng/safety/reset",
+)
+
 SROS2_ENABLE_ENV = "ROS_SECURITY_ENABLE"
 SROS2_KEYSTORE_ENV = "ROS_SECURITY_KEYSTORE"
 SROS2_STRATEGY_ENV = "ROS_SECURITY_STRATEGY"

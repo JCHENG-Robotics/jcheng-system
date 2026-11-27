@@ -261,7 +261,10 @@ class GatewayApp:
                 mode=str(payload["mode"]),
                 priority=int(payload["priority"]),
                 ttl_ms=int(payload["ttl_ms"]),
-                deadman_required=bool(payload.get("deadman_required", False)),
+                # Deadman is required by default for issued leases. A client
+                # can only opt out through an explicitly configured manager
+                # (allow_deadman_opt_out) and an explicit false value.
+                deadman_required=bool(payload.get("deadman_required", True)),
                 contract=self._contract(payload["contract"]),
                 now=now,
                 deadman_ms=(

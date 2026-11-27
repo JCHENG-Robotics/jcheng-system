@@ -40,6 +40,7 @@ def _command(stack, lease_id: str, *, duration_s: float = 0.05) -> MotionCommand
         intent_id=f"stream-{uuid.uuid4().hex[:8]}",
         idempotency_key=f"stream-{uuid.uuid4().hex}",
         lease_id=lease_id,
+        holder="teleop",
         source="test-stream",
         kind="JOINT_STEP",
         profile="pose",
