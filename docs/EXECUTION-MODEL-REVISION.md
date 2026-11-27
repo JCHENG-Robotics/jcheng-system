@@ -289,6 +289,14 @@ read-only) passed on 2026-11-27: 16 packages, `pytest`, `tests_ros` and the
 M5.2 gate. It has **not** been launched against a live vendor stack, and a
 hardware C1–C5 session remains.
 
+Live robot precheck (2026-11-27, read-only): the robot answered on 8765
+(legacy read-only gateway; aux camera and TF alive), but 8766 was closed and
+battery/joint/measured/depth telemetry was unavailable. The `pi` SSH account
+was a time-sync-only ForceCommand (`get`/`set <epoch>`), with no shell or SFTP,
+so R10 could not be deployed. No motion command was sent and the vendor
+container was not restarted. Evidence:
+`e2e/reports/20261127_robot_precheck/`.
+
 ## 3. Stop confirmation levels
 
 The revision separates three levels that are currently collapsed into

@@ -58,7 +58,16 @@ The offline composition tests (`tests/test_vendor_gateway_stack.py`) prove
 `/v1/motion/execute` reaches `HardwareExecutor` over a fake bridge; they do not
 import the ROS node.
 
-## 3. Not verified
+## 3. Live precheck (2026-11-27)
+
+The robot answered on 8765 (legacy read-only gateway; aux camera and TF alive),
+but 8766 was closed and battery/joint/measured/depth telemetry was missing. The
+`pi` SSH was a time-sync-only ForceCommand with no shell/SFTP, so R10 could not
+be deployed. No motion command was sent and the vendor container was not
+restarted. Details:
+[`../20261127_robot_precheck/`](../20261127_robot_precheck/README.md).
+
+## 4. Not verified
 
 - Launch against the running vendor stack (rclpy timers, DDS discovery, bus
   service, publisher subscriber count). The Humble build used mounted message
@@ -66,8 +75,9 @@ import the ROS node.
 - Vendor stack integration: service availability, bus polling, publisher
   subscriber count, stop hold latency.
 - Hardware C1–C5 and any physical motion or physical-stop claim.
-- Application-side M4 enablement (non-mock gateway, L5 evidence, explicit
-  per-session authorization).
+- Application-side M4: the target gate is implemented offline
+  (`--target hardware` + L5 + `hardware` capability), but a real session has
+  not run.
 
 No hardware was opened and no command was published. This evidence is not a
 hardware validation and does not close M4/M5.
