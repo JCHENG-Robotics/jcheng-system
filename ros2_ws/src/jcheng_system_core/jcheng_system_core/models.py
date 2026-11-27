@@ -400,6 +400,8 @@ class StopResult:
     safety: SafetyState
     message: str
     requested_at: float
+    confirmation: str = "request_accepted"
+    physical_stop: str = "unverified"
 
     def to_dict(self, clock: Clock) -> dict[str, Any]:
         return {
@@ -407,4 +409,6 @@ class StopResult:
             "safety": self.safety.to_dict(clock),
             "message": self.message,
             "requested_at": clock.iso(self.requested_at),
+            "confirmation": self.confirmation,
+            "physical_stop": self.physical_stop,
         }

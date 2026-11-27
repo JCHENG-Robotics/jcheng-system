@@ -162,6 +162,8 @@ def test_stop_before_send_does_not_publish() -> None:
     assert bridge.snapshot_entered.wait(2.0)
     stop = executor.stop("operator", "test stop")
     assert stop.accepted is True
+    assert stop.confirmation == "request_accepted"
+    assert stop.physical_stop == "unverified"
     bridge.release_snapshot.set()
     worker.join(2.0)
     assert not worker.is_alive()
@@ -175,7 +177,8 @@ def test_stop_after_send_holds_and_aborts() -> None:
     worker = threading.Thread(target=lambda: results.append(executor.execute(command)))
     worker.start()
     assert bridge.sent.wait(2.0)
-    executor.stop("operator", "test stop")
+    stop = executor.stop("operator", "test stop")
+    assert stop.confirmation == "request_accepted"
     worker.join(2.0)
     assert not worker.is_alive()
     assert results[0].outcome == "ABORTED"
