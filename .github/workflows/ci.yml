@@ -59,7 +59,7 @@ jobs:
       - name: Fetch pinned interfaces
         shell: bash
         run: |
-          git clone --depth 1 --branch v0.1.0 \
+          git clone --depth 1 --branch v0.2.0 \
             https://github.com/JCHENG-Robotics/jcheng-interfaces.git \
             /tmp/jcheng-interfaces
           cp -r /tmp/jcheng-interfaces/ros2_ws/src/jcheng_interfaces ros2_ws/src/
@@ -132,7 +132,7 @@ jobs:
       - name: Fetch pinned interfaces
         shell: bash
         run: |
-          git clone --depth 1 --branch v0.1.0 \
+          git clone --depth 1 --branch v0.2.0 \
             https://github.com/JCHENG-Robotics/jcheng-interfaces.git \
             /tmp/jcheng-interfaces
           cp -r /tmp/jcheng-interfaces/ros2_ws/src/jcheng_interfaces ros2_ws/src/
@@ -204,7 +204,7 @@ jobs:
       - name: Fetch pinned interfaces
         shell: bash
         run: |
-          git clone --depth 1 --branch v0.1.0 \
+          git clone --depth 1 --branch v0.2.0 \
             https://github.com/JCHENG-Robotics/jcheng-interfaces.git \
             /tmp/jcheng-interfaces
           cp -r /tmp/jcheng-interfaces/ros2_ws/src/jcheng_interfaces ros2_ws/src/
@@ -261,7 +261,7 @@ jobs:
       - name: Fetch pinned interfaces
         shell: bash
         run: |
-          git clone --depth 1 --branch v0.1.0 \
+          git clone --depth 1 --branch v0.2.0 \
             https://github.com/JCHENG-Robotics/jcheng-interfaces.git \
             /tmp/jcheng-interfaces
           cp -r /tmp/jcheng-interfaces/ros2_ws/src/jcheng_interfaces ros2_ws/src/
