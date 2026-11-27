@@ -12,14 +12,19 @@ import argparse
 import json
 import math
 import time
+from pathlib import Path
 
 import rclpy
+import yaml
 from rclpy.node import Node
 from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 from jcheng_interfaces.msg import RobotState, TeleopCommand
 from jcheng_interfaces.srv import AcquireLease, ArmSystem, ReleaseLease
 
-CONTRACT = "sha256:0b8d72ced7f54d444d6851d8b99a51a78e2bed3f687324f51a15f76557f24b42"
+_LOCK = Path(__file__).resolve().parents[1] / "locks" / "ecosystem.lock.yaml"
+CONTRACT = yaml.safe_load(_LOCK.read_text(encoding="utf-8"))["repos"]["jcheng-interfaces"][
+    "contract_hash"
+]
 
 
 def _velocity(raw: str, joints: int) -> list[float]:
