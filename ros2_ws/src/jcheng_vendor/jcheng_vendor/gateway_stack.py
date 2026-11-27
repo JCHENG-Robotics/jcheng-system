@@ -22,6 +22,7 @@ from jcheng_system_core.authority import LeaseManager
 from jcheng_system_core.config import ContractConfig, RobotProfile, load_contract
 from jcheng_system_core.evidence import EvidenceStore
 from jcheng_system_core.guard import PublisherGuard
+from jcheng_system_core.hardware_authority import HardwareAuthority
 from jcheng_system_core.models import ContractVersion, MotionCommand
 from jcheng_system_core.safety import SafetyLimits, SafetySupervisor
 from jcheng_system_core.timebase import Clock, ManualClock
@@ -89,6 +90,7 @@ class VendorStack:
     arbiter: HardwareExecutor
     mode: str = "hardware"
     capabilities: tuple[str, ...] = ("hardware",)
+    hardware_authority: HardwareAuthority | None = None
 
     @property
     def version(self) -> ContractVersion:
@@ -116,6 +118,17 @@ class VendorStack:
         guard = PublisherGuard()
         evidence = EvidenceStore(clock, evidence_path)
         hardware = VendorGatewayHardware(bridge)
+        hardware_authority = HardwareAuthority(
+            contract=contract.version,
+            authority=authority,
+            safety=safety,
+            clock=clock,
+            bridge=hardware,
+            guard=guard,
+            max_base_duty=float(
+                profile.profiles.get("base", {}).get("max_abs_duty_normalized", 0.10)
+            ),
+        )
         arbiter = HardwareExecutor(
             profile=profile,
             contract=contract.version,
@@ -126,6 +139,14 @@ class VendorStack:
             evidence=evidence,
             bridge=hardware,
             settle_s=settle_s,
+            hardware_authority=hardware_authority,
+        )
+        # Revoking a lease also stops: the executor latches safety, holds the
+        # arm through the hardware authority and zeroes any base output.
+        authority.set_stop_hook(
+            lambda lease_id, reason: arbiter.stop(
+                "lease_revoke", f"{lease_id}: {reason}"
+            )
         )
         return cls(
             profile=profile,
@@ -137,6 +158,7 @@ class VendorStack:
             guard=guard,
             evidence=evidence,
             arbiter=arbiter,
+            hardware_authority=hardware_authority,
         )
 
     def sync_state(self) -> None:

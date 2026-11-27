@@ -20,6 +20,7 @@ from jcheng_system_core.config import RobotProfile
 from jcheng_system_core.errors import ErrorCode, MotionRejected
 from jcheng_system_core.evidence import EvidenceStore
 from jcheng_system_core.guard import PublisherGuard
+from jcheng_system_core.hardware_authority import HardwareAuthority
 from jcheng_system_core.models import (
     ContractVersion,
     MotionCommand,
@@ -76,6 +77,7 @@ class HardwareExecutor:
         min_gripper_delta_pulses: int = 5,
         settle_s: float = 0.4,
         max_commands_per_second: int = 5,
+        hardware_authority: HardwareAuthority | None = None,
     ) -> None:
         self.profile = profile
         self.contract = contract
@@ -85,6 +87,16 @@ class HardwareExecutor:
         self.guard = guard
         self.evidence = evidence
         self.bridge = bridge
+        # The bridge is only reachable through the single hardware authority.
+        self.hardware_authority = hardware_authority or HardwareAuthority(
+            contract=contract,
+            authority=authority,
+            safety=safety,
+            clock=clock,
+            bridge=bridge,
+            guard=guard,
+            max_base_duty=float(profile.profiles.get("base", {}).get("max_abs_duty_normalized", 0.10)),
+        )
         self.tolerance_pulses = int(tolerance_pulses)
         self.min_gripper_delta_pulses = int(min_gripper_delta_pulses)
         self.settle_s = float(settle_s)
@@ -172,12 +184,9 @@ class HardwareExecutor:
     # ---- validation ----
 
     def validate(self, command: MotionCommand, now: float | None = None):
-        now = self._now(now)
-        guard = self.guard.enforce(self.safety, self.bridge.publishers)
-        lease = self.authority.check(command.lease_id, self.scope_for_kind(command.kind), now)
-        if not guard.ok:
-            return self.safety.validate(command, False, ErrorCode.SAFETY_FAULT.value, now)
-        return self.safety.validate(command, lease.ok, lease.code, now)
+        # Validation and the write share one authority so holder/deadman/stop
+        # checks cannot diverge between the two steps.
+        return self.hardware_authority.validate_arm(command, now)
 
     def _check_kind(self, command: MotionCommand) -> None:
         if command.kind == "JOINT_STEP":
@@ -242,7 +251,7 @@ class HardwareExecutor:
             # after the send orders its hold after the command write.
             with self._active_lock:
                 if self._stop_event.is_set():
-                    self.bridge.hold()
+                    self.hardware_authority.hold_arm()
                     self.safety.end_motion()
                     return self._complete(
                         command,
@@ -254,18 +263,26 @@ class HardwareExecutor:
                         bus_verified=False,
                         measured_positions=list(self.bridge.state().positions),
                     )
-                if command.kind == "JOINT_STEP":
-                    target_pulse = self.bridge.send_step(
-                        command.joint_names[0],
-                        float(command.target_positions[0]),
-                        duration,
+                try:
+                    target_pulse = self.hardware_authority.execute_arm(command)
+                except MotionRejected as exc:
+                    # The authority re-checked contract/lease/holder/deadman,
+                    # stop latch and limits immediately before the write and
+                    # refused it; latch so no later frame slips through.
+                    self.safety.latch(exc.code, exc.message)
+                    self.hardware_authority.hold_arm()
+                    self.safety.end_motion()
+                    return self._complete(
+                        command,
+                        report,
+                        self.clock.now(),
+                        outcome="ABORTED",
+                        code=exc.code,
+                        message=exc.message,
+                        bus_verified=False,
+                        measured_positions=list(self.bridge.state().positions),
                     )
-                else:
-                    assert command.gripper is not None
-                    target_pulse = self.bridge.send_gripper(
-                        float(command.gripper.position_rad),
-                        float(command.gripper.duration_s or duration),
-                    )
+                if command.kind == "GRIPPER" and command.gripper is not None:
                     duration = float(command.gripper.duration_s or duration)
             deadline = self.clock.now() + duration + self.settle_s
             while self.clock.now() < deadline:
@@ -273,7 +290,7 @@ class HardwareExecutor:
                     break
                 time.sleep(min(0.01, max(0.0, deadline - self.clock.now())))
             if self._stop_event.is_set():
-                self.bridge.hold()
+                self.hardware_authority.hold_arm()
                 self.safety.end_motion()
                 return self._complete(
                     command,
@@ -289,7 +306,7 @@ class HardwareExecutor:
                 sample = self.bridge.read_bus(timeout_s=1.0)
             except Exception as exc:  # noqa: BLE001 - bridge boundary
                 self.safety.latch(ErrorCode.MOTION_OUTCOME_UNKNOWN, str(exc))
-                self.bridge.hold()
+                self.hardware_authority.hold_arm()
                 self.safety.end_motion()
                 return self._complete(
                     command,
@@ -306,7 +323,7 @@ class HardwareExecutor:
             )
             if measured is None:
                 self.safety.latch(ErrorCode.MOTION_OUTCOME_UNKNOWN, "target joint missing from bus read")
-                self.bridge.hold()
+                self.hardware_authority.hold_arm()
                 self.safety.end_motion()
                 return self._complete(
                     command,
@@ -337,7 +354,7 @@ class HardwareExecutor:
                         f"start={start} target={target_pulse} measured={measured}"
                     )
                     self.safety.latch(ErrorCode.MOTION_OUTCOME_UNKNOWN, message)
-                    self.bridge.hold()
+                    self.hardware_authority.hold_arm()
                     self.safety.end_motion()
                     return self._complete(
                         command,
@@ -359,7 +376,7 @@ class HardwareExecutor:
                         ErrorCode.MOTION_OUTCOME_UNKNOWN,
                         f"bus target {measured} != commanded {target_pulse}",
                     )
-                    self.bridge.hold()
+                    self.hardware_authority.hold_arm()
                     self.safety.end_motion()
                     return self._complete(
                         command,
@@ -408,29 +425,22 @@ class HardwareExecutor:
         # this hold follows it).
         with self._active_lock:
             self._stop_event.set()
-            self.safety.latch(
-                ErrorCode.SAFETY_STOP_LATCHED,
-                f"software stop by {operator_id}: {reason}",
-            )
-            started = time.monotonic()
-            self.bridge.hold()
-        self.last_stop_latency_ms = (time.monotonic() - started) * 1000.0
+            result = self.hardware_authority.stop(operator_id, reason, now)
+        self.last_stop_latency_ms = self.hardware_authority.last_stop_latency_ms
         with self._evidence_lock:
             self.evidence.record_event(
                 "software_stop",
                 operator_id=operator_id,
                 reason=reason,
-                hold_latency_ms=round(self.last_stop_latency_ms, 3),
+                hold_latency_ms=(
+                    round(self.last_stop_latency_ms, 3)
+                    if self.last_stop_latency_ms is not None
+                    else None
+                ),
             )
-        return StopResult(
-            accepted=True,
-            safety=self.safety.current_state(),
-            message="software stop requested; not an emergency stop",
-            requested_at=now,
-            # stop() returns after the hold is published; the worker records
-            # the terminal ABORTED later. Do not claim S2 from this call.
-            confirmation="request_accepted",
-        )
+        # stop() returns after the hold is published; the worker records the
+        # terminal ABORTED later. Do not claim S2 from this call.
+        return result
 
     def tick(self, now: float | None = None) -> None:
         now = self._now(now)
@@ -440,9 +450,14 @@ class HardwareExecutor:
             active = self._active
         if active is None:
             return
-        lease = self.authority.check(active.lease_id, self.scope_for_kind(active.kind), now)
+        lease = self.authority.check(
+            active.lease_id,
+            self.scope_for_kind(active.kind),
+            now,
+            holder=active.holder or None,
+        )
         if not lease.ok:
             with self._active_lock:
                 self._stop_event.set()
                 self.safety.latch(lease.code, lease.message or "lease expired or revoked")
-                self.bridge.hold()
+                self.hardware_authority.hold_arm()

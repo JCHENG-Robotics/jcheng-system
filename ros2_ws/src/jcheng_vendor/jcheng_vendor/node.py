@@ -49,8 +49,13 @@ from jcheng_system_core.config import RobotProfile, find_repo_root, load_contrac
 from jcheng_system_core.errors import ErrorCode, MotionRejected
 from jcheng_system_core.evidence import EvidenceStore
 from jcheng_system_core.guard import PublisherGuard
+from jcheng_system_core.hardware_authority import HardwareAuthority
 from jcheng_system_core.safety import SafetyLimits, SafetySupervisor
 from jcheng_system_core.timebase import Clock
+from jcheng_system_core.vendor_gate import (
+    DDS_ACTION_TOPIC,
+    evaluate_dds_execute_gate,
+)
 
 from .bridge import VendorBridge
 from .executor import HardwareExecutor
@@ -88,6 +93,19 @@ class VendorRuntimeNode(Node):
             bus_service=str(self.get_parameter("bus_service").value),
             command_topic=str(self.get_parameter("command_topic").value),
         )
+        self.hardware_authority = HardwareAuthority(
+            contract=self.contract.version,
+            authority=self.authority,
+            safety=self.safety,
+            clock=self.clock,
+            bridge=self.bridge,
+            guard=PublisherGuard(),
+            max_base_duty=float(
+                self.profile.profiles.get("base", {}).get(
+                    "max_abs_duty_normalized", 0.10
+                )
+            ),
+        )
         self.motion_executor = HardwareExecutor(
             profile=self.profile,
             contract=self.contract.version,
@@ -97,6 +115,13 @@ class VendorRuntimeNode(Node):
             guard=PublisherGuard(),
             evidence=self.evidence,
             bridge=self.bridge,
+            hardware_authority=self.hardware_authority,
+        )
+        # A lease revocation is also a stop request on the hardware path.
+        self.authority.set_stop_hook(
+            lambda lease_id, reason: self.motion_executor.stop(
+                "lease_revoke", f"{lease_id}: {reason}"
+            )
         )
         self._lock = threading.RLock()
         callback_group = ReentrantCallbackGroup()
@@ -164,15 +189,27 @@ class VendorRuntimeNode(Node):
             self._capabilities,
             callback_group=callback_group,
         )
-        self._action_server = ActionServer(
-            self,
-            ExecuteMotion,
-            "/jcheng/motion/execute",
-            execute_callback=self._execute,
-            goal_callback=self._goal,
-            cancel_callback=self._cancel,
-            callback_group=callback_group,
-        )
+        # DDS ExecuteMotion is test-only and disabled by default. HTTP
+        # /v1/motion/* remains the only external entry. The gate is checked
+        # before the ActionServer is created; denial leaves the C++/Python
+        # action plumbing intact but unadvertised.
+        self.dds_execute_gate = evaluate_dds_execute_gate(topic=DDS_ACTION_TOPIC)
+        if self.dds_execute_gate.allowed:
+            self._action_server = ActionServer(
+                self,
+                ExecuteMotion,
+                DDS_ACTION_TOPIC,
+                execute_callback=self._execute,
+                goal_callback=self._goal,
+                cancel_callback=self._cancel,
+                callback_group=callback_group,
+            )
+        else:
+            self._action_server = None
+            self.get_logger().warning(
+                "DDS ExecuteMotion ActionServer disabled: "
+                f"{self.dds_execute_gate.code}: {self.dds_execute_gate.message}"
+            )
         self.create_subscription(
             Bool,
             "/safety_stop",
