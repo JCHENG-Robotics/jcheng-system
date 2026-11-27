@@ -40,15 +40,31 @@ a second probe that restarts `seq` at 0 is rejected with
 A future probe should accept a starting sequence or the runtime should scope
 sequence numbers per session/lease.
 
+## Simulation bridge (domain 42 + 43)
+
+With `sim_bridge:=true` and `streaming:=true`, the same probe ran against the
+ArmPi mock plant on domain 43:
+
+```json
+{"frames": 100, "first": [0.0, 0.0, 0.0, 0.0, 0.0],
+ "last": [0.179087, 0.179087, -0.179087, 0.179087, -0.179087],
+ "delta": [0.179087, 0.179087, -0.179087, 0.179087, -0.179087],
+ "moved_joints": 5}
+```
+
+All five joints moved in the plant through the domain-43 bridge; the plant's
+first-order lag explains the smaller endpoint vs the mock's 0.33 rad. No
+warning, abort or latch in the runtime log.
+
 ## Tests
 
 Core suite: **76 passed**; gate OK. This report is the L3 integration evidence
-for the streaming intake on the mock stack.
+for the streaming intake on the mock stack and the domain-43 bridge.
 
 ## Limits
 
-- Mock hardware only; the domain-43 simulation bridge and the vendor
-  `ServosPosition` path are not exercised.
+- Mock and mock-plant only; the vendor `ServosPosition` path is not exercised.
+- No latency/tracking distribution; endpoint deltas only.
 - No latency/tracking distribution; only endpoint deltas.
 - The 20 Hz runtime timer produced ~22 frames over 2 s (about 11 Hz under this
   host load); the intake is bounded by the timer, not a real-time guarantee.
