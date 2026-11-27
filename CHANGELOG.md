@@ -8,6 +8,12 @@ All notable changes to this project are documented here. Format based on
 
 ### Added
 
+- R10: `jcheng_vendor/gateway_node.py` and
+  `jcheng_bringup/launch/gateway_vendor.launch.py`: a ROS process that owns the
+  vendor bridge, requires `enable_motion:=true` and a token, performs an
+  initial bus read before serving, polls the bus at about 0.25 s, serves
+  `GatewayApp` over HTTP, runs `arbiter.tick`, and routes `/safety_stop` to the
+  executor stop. Compile-checked; Humble build and hardware C1–C5 pending.
 - R9: `jcheng_vendor.gateway_stack.VendorStack` composes the M5.2
   `HardwareExecutor` with the HTTP `GatewayApp`; `VendorGatewayHardware`
   adapts the read surface, and `mode="hardware"` / `capabilities=("hardware",)`

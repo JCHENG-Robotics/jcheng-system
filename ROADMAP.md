@@ -38,9 +38,8 @@ passed `m1-gate`, `m3-mock`, `m4-readonly`, `m5-mock`, `m5-vendor` and
 
 R5 (`StopResult` confirmation levels) is merged as a proposal in
 `jcheng-interfaces` (#8); the schema, tag and contract hash are unchanged, so
-the system gateway does not emit the fields yet. The deployed
-`armpi_debug_gateway` was not probed on hardware, and M4 must repeat C1–C5
-there before any motion session.
+the system gateway does not emit the fields yet. The deployed legacy
+`armpi_debug_gateway` is not the motion target; see the target decision below.
 
 R7 (2026-11-26) is an offline finding against that deployed gateway: a stop
 that arrives between `MotionGuard.validate()` and `start()` is lost, and the
@@ -56,10 +55,11 @@ publishes no command. Evidence:
 [`e2e/reports/20261126_vendor_executor_c2p/`](e2e/reports/20261126_vendor_executor_c2p/README.md).
 The deployed legacy gateway's R7 race remains a documented risk but is not on
 the chosen path. R9 composes the M5.2 executor behind the HTTP `GatewayApp`
-(`VendorStack`, `mode="hardware"`) and proves `/v1/motion/execute` offline. A
-ROS process owning `VendorBridge`/bus polling and a hardware C1–C5 session
-remain; if the deployed gateway is ever used, it needs the atomic dispatch fix
-and C1–C5 as well.
+(`VendorStack`, `mode="hardware"`) and proves `/v1/motion/execute` offline. R10
+adds the ROS gateway node and launch (token + `enable_motion` gate, initial bus
+read, 0.25 s poll, HTTP + tick); it is compile-checked, not yet Humble-built or
+run on hardware. A hardware C1–C5 session remains; if the deployed legacy
+gateway is ever used, it needs the atomic dispatch fix and C1–C5 as well.
 
 ## Milestones
 

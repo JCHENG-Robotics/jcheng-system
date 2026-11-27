@@ -9,7 +9,16 @@ setup(
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         ("share/" + package_name, ["package.xml"]),
-        ("share/" + package_name + "/launch", ["launch/mock_stack.launch.py"]),
+        (
+            "share/" + package_name + "/launch",
+            [
+                "launch/mock_stack.launch.py",
+                "launch/motion_mock.launch.py",
+                "launch/motion_vendor.launch.py",
+                "launch/readonly.launch.py",
+                "launch/gateway_vendor.launch.py",
+            ],
+        ),
     ],
     install_requires=["setuptools"],
     zip_safe=True,
