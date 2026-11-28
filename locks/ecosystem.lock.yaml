@@ -11,23 +11,23 @@ toolchain:
 repos:
   jcheng-interfaces:
     url: "https://github.com/JCHENG-Robotics/jcheng-interfaces"
-    version: "0.2.0"
-    tag: "v0.2.0"
-    commit: "b03a054a59f70c24741fce37ebe1bb03978d9021"
-    contract_hash: "sha256:afca22a42f7163e0351d185d5a8577b0b51f2f3da4b92278f161a4a7d2c35b1c"
+    version: "0.3.0"
+    tag: "v0.3.0"
+    commit: "9b643e25ebd5ce130a53cbe72ea1e0690f8c4f19"
+    contract_hash: "sha256:8bc92d18a503ec54db443596eec232b5117f4c6d510f7493d4e107b93a5d3358"
 modules:
   jcheng-applications:
     version: "0.1.0"
     commit: "0bd57de1b21b9f16c4230dca147e493be4a5c2b8"
-    interfaces: ">=0.2,<0.3"
+    interfaces: ">=0.3,<0.4"
   jcheng-studio:
     version: "0.7.0"
     commit: "1eade61f467cda6c8a218a803033b489ae9792cc"
-    interfaces: ">=0.2,<0.3"
+    interfaces: ">=0.3,<0.4"
   jcheng-teleop:
     version: "0.3.0"
     commit: "eca822399f03c5ca6228306ffc931d764e766941"
-    interfaces: ">=0.2,<0.3"
+    interfaces: ">=0.3,<0.4"
 robot:
   name: armpi_ultra
   profile_version: "1.0.0"

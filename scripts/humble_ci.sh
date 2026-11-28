@@ -16,7 +16,7 @@
 #   scripts/humble_ci.sh --offline        # skip the remote tag check
 #
 # The interface package comes from ../jcheng-interfaces by default (CI clones
-# the pinned v0.2.0 tag). Override with INTERFACES=/path/to/jcheng-interfaces.
+# the pinned v0.3.0 tag). Override with INTERFACES=/path/to/jcheng-interfaces.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
