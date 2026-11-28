@@ -23,6 +23,7 @@ for f in \
   LICENSE-REVIEW.md \
   pytest.ini \
   configs/contract.yaml \
+  configs/api.yaml \
   configs/domains.yaml \
   configs/readonly.yaml \
   configs/robots/armpi_ultra/profile.yaml \

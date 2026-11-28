@@ -134,7 +134,7 @@ def test_gateway_over_fake_vendor_graph() -> None:
                 "mode": "exclusive",
                 "priority": 100,
                 "ttl_ms": 30_000,
-                "deadman_required": True,
+                "deadman_required": False,
                 "contract": contract,
             },
         )

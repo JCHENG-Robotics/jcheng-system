@@ -21,6 +21,12 @@ Units expected in this directory:
 | `armpi-gateway.service` | boot, enabled | 8765 read-only gateway |
 | `armpi-gateway-pose.service` | manual | 8766 pose gateway; arm motion possible |
 | `armpi-ext-cam.service` | disabled | retired UVC path; kept for reference |
+| `jcheng-system-readonly.service` | boot, enabled | `/v1` read-only gateway on 8767 (`jcheng_telemetry`), loopback only |
+
+`jcheng-system-readonly.service` is installed by
+`../install-readonly-gateway.sh` (run script + token env), not by `capture.sh`:
+it is the first jcheng-system workload on the host, and it is read-only by
+construction (`writes: 0`, non-GET rejected with 403).
 
 `jcheng-perception-*.service/.target` are **not** here: they are versioned in
 `jcheng-perception/deploy/systemd/`.

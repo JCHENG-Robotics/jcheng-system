@@ -1,0 +1,27 @@
+[Unit]
+Description=JCHENG system read-only /v1 gateway (8767, writes=0)
+Documentation=https://github.com/JCHENG-Robotics/jcheng-system
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+# The host-side wrapper only runs `docker exec`; the in-container node runs as
+# the vendor `ubuntu` user. `pi` is in the docker group.
+User=pi
+Group=docker
+EnvironmentFile=/etc/jcheng-system/readonly.env
+ExecStart=/usr/local/lib/jcheng-system/jcheng-system-readonly-run.sh
+# `docker exec` does not forward signals to the command inside the container.
+# Stop the in-container node explicitly; the gateway turns SIGTERM into a clean
+# rclpy/HTTP shutdown. The `[j]` keeps pkill from matching its own shell, and
+# the `--` terminator keeps the pattern from being parsed as an option (same
+# lesson as armpi-gateway.service, 2026-11-21).
+ExecStop=/bin/bash -c '/usr/bin/docker exec ArmPiUltra pkill -TERM -f -- "[j]cheng_telemetry_node" || true'
+TimeoutStopSec=20
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
