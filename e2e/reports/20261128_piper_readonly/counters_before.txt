@@ -1,0 +1,3 @@
+2026-11-28T12:01:04Z
+can_leader1 tx=0 rx=429676 err=0
+can_follower1 tx=0 rx=461189 err=0

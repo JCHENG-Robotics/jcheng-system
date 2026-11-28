@@ -1,0 +1,47 @@
+== capture ==
+lines=3550870
+total_duration=1802.515s
+can_follower1: frames=1799965 rate=998.6 Hz max_gap=8.3ms
+  2A1: 359993 frames  199.7 Hz
+  2A5: 359993 frames  199.7 Hz
+  2A6: 359993 frames  199.7 Hz
+  2A7: 359993 frames  199.7 Hz
+  2A8: 359993 frames  199.7 Hz
+can_leader1: frames=1750905 rate=971.4 Hz max_gap=8.9ms
+  2A1: 350181 frames  194.3 Hz
+  2A5: 350181 frames  194.3 Hz
+  2A6: 350181 frames  194.3 Hz
+  2A7: 350181 frames  194.3 Hz
+  2A8: 350181 frames  194.3 Hz
+== joints (deg) ==
+can_follower1 j1: min=-7.316 max=-7.316 mean=-7.316 span=0.000
+can_follower1 j2: min=2.791 max=2.791 mean=2.791 span=0.000
+can_follower1 j3: min=0.000 max=0.000 mean=0.000 span=0.000
+can_follower1 j4: min=-6.769 max=-6.769 mean=-6.769 span=0.000
+can_follower1 j5: min=9.166 max=9.166 mean=9.166 span=0.000
+can_follower1 j6: min=-11.993 max=-11.993 mean=-11.993 span=0.000
+can_leader1 j1: min=-5.916 max=-5.916 mean=-5.916 span=0.000
+can_leader1 j2: min=2.789 max=2.891 mean=2.869 span=0.102
+can_leader1 j3: min=2.496 max=2.496 mean=2.496 span=0.000
+can_leader1 j4: min=-4.644 max=1.488 mean=-1.635 span=6.132
+can_leader1 j5: min=-12.662 max=3.605 mean=1.399 span=16.267
+can_leader1 j6: min=8.930 max=45.049 mean=31.165 span=36.119
+== status 0x2A1 ==
+can_follower1: distinct=1
+  n=359993 raw=01 00 01 02 00 00 00 00 ctrl=0x01 arm=0x00 mode=0x01 teach=0x02 err=0x0000
+can_leader1: distinct=1
+  n=350181 raw=02 00 00 01 00 00 00 00 ctrl=0x02 arm=0x00 mode=0x00 teach=0x01 err=0x0000
+== gripper 0x2A8 ==
+can_follower1: angle 0.100..0.100 effort -106..-12
+can_leader1: angle -3.000..94.500 effort -1228..181
+== sdk parity ==
+frames_checked=43878 mismatches=0 max_abs_diff_deg=0.000000000
+== write / bus counters ==
+before:
+2026-11-28T12:01:04Z
+can_leader1 tx=0 rx=429676 err=0
+can_follower1 tx=0 rx=461189 err=0
+after:
+can_leader1 tx=0 rx=4847936 rx_errors=0
+can_follower1 tx=0 rx=5199229 rx_errors=0
+tx_monitor_samples=720 unique_values=[0] max=0
