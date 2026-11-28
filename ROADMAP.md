@@ -2,8 +2,9 @@
 
 > Status: **v0.3.0-dev** as of 2026-11-26. M4 read-only, M5.2 core motion, M6 S13
 > and S17 real MoveIt, the teleop intake and the test-only simulation bridge are
-> verified on the mock/simulation; S14 base, full G8, teleop hardware and the
-> S7/S9 residuals remain.
+> verified on the mock/simulation. The ArmPi Ultra platform is **Frozen** as of
+> 2026-11-28 (ADR-0007), so S14 and full G8 will not start; teleop hardware and
+> the S7/S9 residuals remain unverified.
 
 ## Current state
 
@@ -17,7 +18,7 @@
 | M6 S17 plan-only | Complete, offline (2026-11-24) | `test_moveit_plan_only.py` |
 | M6 S17 real MoveIt plan-only | Complete (2026-11-25) | `SUCCESS`, 8-point plan, 0 controller servers, no command topics; `docs/M6-SCOPE.md` |
 | ArmPi Ultra runtime image | Complete (2026-11-25) | `armpi-ultra:flatten-20261125`, 7.1 GB; `deploy/armpi-ultra/docs/ACCEPTANCE-20261125.md` |
-| M6 S14 base / full G8 | Not started | — |
+| M6 S14 base / full G8 | Not started — ArmPi platform `Frozen` 2026-11-28; will not start | — |
 | Teleoperation intake core + ROS subscriber + test-only simulation bridge (ArmPi, Gate-2; PiPER X core) | Complete, mock/simulation only (2026-11-26); domain-42 Gate-2 L3 and Humble build/tests pass | `tests/test_teleop.py`; `tests_ros/test_teleop_runtime.py`; `e2e/reports/20261126_teleop_sim/`; `e2e/reports/20261126_teleop_humble/`; `docs/TELEOP-INTAKE.md` |
 | S7 stale-state injection, S9 runtime publisher | Not verified | — |
 
