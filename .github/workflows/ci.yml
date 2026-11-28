@@ -49,6 +49,7 @@ jobs:
             python3-colcon-common-extensions \
             python3-pip \
             python3-setuptools \
+            python3-venv \
             python3-yaml \
             ros-jazzy-ament-cmake \
             ros-jazzy-builtin-interfaces \
@@ -56,7 +57,8 @@ jobs:
             ros-jazzy-rosidl-default-generators \
             ros-jazzy-rosidl-default-runtime \
             ros-jazzy-std-msgs
-          python3 -m pip install --no-cache-dir --break-system-packages 'pytest==8.3.4'
+          python3 -m venv --system-site-packages /tmp/ci-venv
+          /tmp/ci-venv/bin/pip install --no-cache-dir 'pytest==8.3.4'
       - name: Fetch pinned interfaces
         shell: bash
         run: |
@@ -76,9 +78,9 @@ jobs:
         run: |
           source /opt/ros/jazzy/setup.bash
           source install/setup.bash
-          python3 -m pytest -q
+          /tmp/ci-venv/bin/python -m pytest -q
           ros2 run jcheng_testkit jcheng_scenarios --root . --out e2e/reports/m3-mock.json
-          python3 tools/verify_lock.py \
+          /tmp/ci-venv/bin/python tools/verify_lock.py \
             --root . \
             --remote \
             --interfaces-root /tmp/jcheng-interfaces \
@@ -116,6 +118,7 @@ jobs:
             python3-colcon-common-extensions \
             python3-pip \
             python3-setuptools \
+            python3-venv \
             python3-yaml \
             ros-jazzy-ament-cmake \
             ros-jazzy-builtin-interfaces \
@@ -126,7 +129,8 @@ jobs:
             ros-jazzy-sensor-msgs \
             ros-jazzy-std-msgs \
             ros-jazzy-tf2-msgs
-          python3 -m pip install --no-cache-dir --break-system-packages 'pytest==8.3.4'
+          python3 -m venv --system-site-packages /tmp/ci-venv
+          /tmp/ci-venv/bin/pip install --no-cache-dir 'pytest==8.3.4'
       - name: M4 read-only gate
         shell: bash
         run: bash scripts/check_m4_readonly.sh
@@ -149,7 +153,7 @@ jobs:
         run: |
           source /opt/ros/jazzy/setup.bash
           source install/setup.bash
-          python3 -m pytest -q
+          /tmp/ci-venv/bin/python -m pytest -q
           ros2 run jcheng_telemetry jcheng_readonly_probe \
             --root . \
             --duration-s 3 \
@@ -193,6 +197,7 @@ jobs:
             python3-colcon-common-extensions \
             python3-pip \
             python3-setuptools \
+            python3-venv \
             python3-yaml \
             ros-jazzy-ament-cmake \
             ros-jazzy-builtin-interfaces \
@@ -201,7 +206,8 @@ jobs:
             ros-jazzy-rosidl-default-generators \
             ros-jazzy-rosidl-default-runtime \
             ros-jazzy-std-msgs
-          python3 -m pip install --no-cache-dir --break-system-packages 'pytest==8.3.4'
+          python3 -m venv --system-site-packages /tmp/ci-venv
+          /tmp/ci-venv/bin/pip install --no-cache-dir 'pytest==8.3.4'
       - name: Fetch pinned interfaces
         shell: bash
         run: |
@@ -221,8 +227,8 @@ jobs:
         run: |
           source /opt/ros/jazzy/setup.bash
           source install/setup.bash
-          python3 -m pytest -q
-          python3 -m pytest -q tests_ros
+          /tmp/ci-venv/bin/python -m pytest -q
+          /tmp/ci-venv/bin/python -m pytest -q tests_ros
           bash scripts/check_m5_mock.sh
 
   # Robot-bound: the ArmPi vendor runtime is ROS 2 Humble. Keep this
