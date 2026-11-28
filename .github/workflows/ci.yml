@@ -56,7 +56,7 @@ jobs:
             ros-jazzy-rosidl-default-generators \
             ros-jazzy-rosidl-default-runtime \
             ros-jazzy-std-msgs
-          python3 -m pip install --no-cache-dir 'pytest==8.3.4'
+          python3 -m pip install --no-cache-dir --break-system-packages 'pytest==8.3.4'
       - name: Fetch pinned interfaces
         shell: bash
         run: |
@@ -126,7 +126,7 @@ jobs:
             ros-jazzy-sensor-msgs \
             ros-jazzy-std-msgs \
             ros-jazzy-tf2-msgs
-          python3 -m pip install --no-cache-dir 'pytest==8.3.4'
+          python3 -m pip install --no-cache-dir --break-system-packages 'pytest==8.3.4'
       - name: M4 read-only gate
         shell: bash
         run: bash scripts/check_m4_readonly.sh
@@ -201,7 +201,7 @@ jobs:
             ros-jazzy-rosidl-default-generators \
             ros-jazzy-rosidl-default-runtime \
             ros-jazzy-std-msgs
-          python3 -m pip install --no-cache-dir 'pytest==8.3.4'
+          python3 -m pip install --no-cache-dir --break-system-packages 'pytest==8.3.4'
       - name: Fetch pinned interfaces
         shell: bash
         run: |
