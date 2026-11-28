@@ -3,9 +3,18 @@
 The substrate the robot boots into: the vendor ROS 2 Humble container, the host
 systemd units that execute into it, and the image those units assume.
 
-> Status: **Deployed** — 2026-11-25. Image flattened from 11.6 GB to 7.1 GB;
-> host root filesystem 44 GB → 22 GB used. Verified against the pre-change
-> baseline (20 ROS nodes, 60 topics, both gateways, both cameras).
+> Status: **Frozen** — 2026-11-28. The ArmPi Ultra platform is retired from
+> active development; the image, units and evidence are retained for the
+> read-only demo and rollback. No new motion work is accepted; only the
+> read-only gateway is to remain. Last deployment state (2026-11-25): image
+> flattened from 11.6 GB to 7.1 GB; host root filesystem 44 GB → 22 GB used;
+> verified against the pre-change baseline (20 ROS nodes, 60 topics, both
+> gateways, both cameras).
+>
+> Freeze decision: `jcheng-design/docs/ecosystem/17-platform-pivot.md` and
+> ADR-0007 (approved 2026-11-28, separate checkout). Freeze record:
+> `jcheng-design/docs/ecosystem/evidence/armpi-freeze-20261128/README.md`.
+> Do not restart the vendor container.
 >
 > English canonical.
 
@@ -245,3 +254,19 @@ data backups listed in `docs/IMAGE-SLIMMING-20261125.md` §6.
 - No vendor replacement here. `ros2_ws` (kinematics, `ros_robot_controller`,
   `servo_manager`, `controller_manager`) is still the running motion stack.
 - No secrets. Gateway tokens stay in `/home/pi/docker/tmp/armpi_gateway_deploy/token`.
+
+## 9. Freeze (2026-11-28)
+
+| Surface | State |
+|---|---|
+| Platform | `Frozen` |
+| New motion work | Not accepted |
+| `jcheng-gateway-vendor.service` | Must not be started again; the on-robot stop is a separate authorized action |
+| `jcheng-system-readonly.service` | Retained for the read-only demo |
+| Image | `armpi-ultra:flatten-20261125` unchanged |
+| Evidence | Unchanged; nothing deleted or moved |
+
+The on-robot stop is a per-session operator action, never a CI or unattended
+step. The vendor container is never restarted: its startup check moves the arm.
+Rollback is limited to starting the read-only unit; the motion gateway stays
+stopped.
