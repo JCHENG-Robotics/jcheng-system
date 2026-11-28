@@ -12,6 +12,6 @@ def test_profile_and_contract(root: Path) -> None:
     assert profile.profile_hash.startswith("sha256:")
     assert profile.config_hash.startswith("sha256:")
     assert contract.version.major == 0
-    assert contract.version.minor == 2
+    assert contract.version.minor == 3
     assert contract.version.contract_hash.startswith("sha256:")
-    assert contract.interfaces_tag == "v0.2.0"
+    assert contract.interfaces_tag == "v0.3.0"
