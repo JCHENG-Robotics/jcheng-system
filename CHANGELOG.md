@@ -6,6 +6,14 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+### Changed
+
+- Default CI and local tooling moved to ROS 2 Jazzy: `m3-mock`, `m4-readonly`
+  and `m5-mock` build in `ros:jazzy-ros-base`, `m6-replay` uses Python 3.12,
+  and `scripts/jazzy_ci.sh` is the local Jazzy wrapper. `m5-vendor` remains on
+  Humble because the ArmPi vendor runtime is Humble. The lockfile records the
+  Jazzy toolchain (`ros:jazzy-ros-base`, Python 3.12, Ubuntu 24.04).
+
 ### Added
 
 - R11 authority hardening (offline): `jcheng_system_core/hardware_authority.py`

@@ -3,10 +3,13 @@ release: "2026.11.1"
 channel: dev
 created_at: "2026-11-27T05:00:00Z"
 toolchain:
-  ros_distro: humble
-  ros_image: "ros:humble-ros-base@sha256:dfc94c85d8e01f230951b2a85ca5576e08473081c3da5fbbe8f3ab844703b9ba"
-  python: "3.10"
-  os: ubuntu-22.04
+  # Default development and CI toolchain. The ArmPi vendor runtime on the
+  # robot remains ROS 2 Humble; only the robot-bound m5-vendor job uses
+  # ros:humble-ros-base.
+  ros_distro: jazzy
+  ros_image: "ros:jazzy-ros-base@sha256:5147d3ae250ce754afd399f6bfec15b33dd4e473ca357e30432a3182031bfad6"
+  python: "3.12"
+  os: ubuntu-24.04
   colcon: "0.2.x"
 repos:
   jcheng-interfaces:

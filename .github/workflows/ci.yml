@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container:
-      image: ros:humble-ros-base@sha256:dfc94c85d8e01f230951b2a85ca5576e08473081c3da5fbbe8f3ab844703b9ba
+      image: ros:jazzy-ros-base@sha256:5147d3ae250ce754afd399f6bfec15b33dd4e473ca357e30432a3182031bfad6
     env:
       DEBIAN_FRONTEND: noninteractive
       PYTHONUNBUFFERED: "1"
@@ -50,12 +50,12 @@ jobs:
             python3-pip \
             python3-setuptools \
             python3-yaml \
-            ros-humble-ament-cmake \
-            ros-humble-builtin-interfaces \
-            ros-humble-geometry-msgs \
-            ros-humble-rosidl-default-generators \
-            ros-humble-rosidl-default-runtime \
-            ros-humble-std-msgs
+            ros-jazzy-ament-cmake \
+            ros-jazzy-builtin-interfaces \
+            ros-jazzy-geometry-msgs \
+            ros-jazzy-rosidl-default-generators \
+            ros-jazzy-rosidl-default-runtime \
+            ros-jazzy-std-msgs
           python3 -m pip install --no-cache-dir 'pytest==8.3.4'
       - name: Fetch pinned interfaces
         shell: bash
@@ -67,14 +67,14 @@ jobs:
       - name: Build interface and system packages
         shell: bash
         run: |
-          source /opt/ros/humble/setup.bash
+          source /opt/ros/jazzy/setup.bash
           colcon build \
             --base-paths ros2_ws/src \
             --event-handlers console_cohesion+
       - name: Contract and mock scenarios
         shell: bash
         run: |
-          source /opt/ros/humble/setup.bash
+          source /opt/ros/jazzy/setup.bash
           source install/setup.bash
           python3 -m pytest -q
           ros2 run jcheng_testkit jcheng_scenarios --root . --out e2e/reports/m3-mock.json
@@ -96,7 +96,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container:
-      image: ros:humble-ros-base@sha256:dfc94c85d8e01f230951b2a85ca5576e08473081c3da5fbbe8f3ab844703b9ba
+      image: ros:jazzy-ros-base@sha256:5147d3ae250ce754afd399f6bfec15b33dd4e473ca357e30432a3182031bfad6
     env:
       DEBIAN_FRONTEND: noninteractive
       PYTHONUNBUFFERED: "1"
@@ -117,15 +117,15 @@ jobs:
             python3-pip \
             python3-setuptools \
             python3-yaml \
-            ros-humble-ament-cmake \
-            ros-humble-builtin-interfaces \
-            ros-humble-geometry-msgs \
-            ros-humble-rclpy \
-            ros-humble-rosidl-default-generators \
-            ros-humble-rosidl-default-runtime \
-            ros-humble-sensor-msgs \
-            ros-humble-std-msgs \
-            ros-humble-tf2-msgs
+            ros-jazzy-ament-cmake \
+            ros-jazzy-builtin-interfaces \
+            ros-jazzy-geometry-msgs \
+            ros-jazzy-rclpy \
+            ros-jazzy-rosidl-default-generators \
+            ros-jazzy-rosidl-default-runtime \
+            ros-jazzy-sensor-msgs \
+            ros-jazzy-std-msgs \
+            ros-jazzy-tf2-msgs
           python3 -m pip install --no-cache-dir 'pytest==8.3.4'
       - name: M4 read-only gate
         shell: bash
@@ -140,14 +140,14 @@ jobs:
       - name: Build interface and system packages
         shell: bash
         run: |
-          source /opt/ros/humble/setup.bash
+          source /opt/ros/jazzy/setup.bash
           colcon build \
             --base-paths ros2_ws/src \
             --event-handlers console_cohesion+
       - name: Read-only tests and short probe
         shell: bash
         run: |
-          source /opt/ros/humble/setup.bash
+          source /opt/ros/jazzy/setup.bash
           source install/setup.bash
           python3 -m pytest -q
           ros2 run jcheng_telemetry jcheng_readonly_probe \
@@ -173,7 +173,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container:
-      image: ros:humble-ros-base@sha256:dfc94c85d8e01f230951b2a85ca5576e08473081c3da5fbbe8f3ab844703b9ba
+      image: ros:jazzy-ros-base@sha256:5147d3ae250ce754afd399f6bfec15b33dd4e473ca357e30432a3182031bfad6
     env:
       DEBIAN_FRONTEND: noninteractive
       PYTHONUNBUFFERED: "1"
@@ -194,13 +194,13 @@ jobs:
             python3-pip \
             python3-setuptools \
             python3-yaml \
-            ros-humble-ament-cmake \
-            ros-humble-builtin-interfaces \
-            ros-humble-geometry-msgs \
-            ros-humble-rclpy \
-            ros-humble-rosidl-default-generators \
-            ros-humble-rosidl-default-runtime \
-            ros-humble-std-msgs
+            ros-jazzy-ament-cmake \
+            ros-jazzy-builtin-interfaces \
+            ros-jazzy-geometry-msgs \
+            ros-jazzy-rclpy \
+            ros-jazzy-rosidl-default-generators \
+            ros-jazzy-rosidl-default-runtime \
+            ros-jazzy-std-msgs
           python3 -m pip install --no-cache-dir 'pytest==8.3.4'
       - name: Fetch pinned interfaces
         shell: bash
@@ -212,19 +212,21 @@ jobs:
       - name: Build interface and system packages
         shell: bash
         run: |
-          source /opt/ros/humble/setup.bash
+          source /opt/ros/jazzy/setup.bash
           colcon build \
             --base-paths ros2_ws/src \
             --event-handlers console_cohesion+
       - name: M5.1 Mock transport tests
         shell: bash
         run: |
-          source /opt/ros/humble/setup.bash
+          source /opt/ros/jazzy/setup.bash
           source install/setup.bash
           python3 -m pytest -q
           python3 -m pytest -q tests_ros
           bash scripts/check_m5_mock.sh
 
+  # Robot-bound: the ArmPi vendor runtime is ROS 2 Humble. Keep this
+  # job on Humble until the vendor image itself moves to Jazzy.
   m5-vendor:
     name: m5-vendor
     runs-on: ubuntu-latest
@@ -292,7 +294,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.12"
       - name: Install test dependencies
         shell: bash
         run: python3 -m pip install --no-cache-dir 'pytest==8.3.4' 'PyYAML==6.0.2'

@@ -106,15 +106,17 @@ HTTP/CLI client
 
 ## 3. Requirements
 
-- ROS 2 Humble on the robot; Jazzy is used for local host builds.
-- Python ≥ 3.10, `pytest`, `PyYAML`.
+- ROS 2 Jazzy is the default host and CI toolchain. The ArmPi vendor runtime on
+  the robot is still ROS 2 Humble; only the robot-bound `m5-vendor` job builds
+  in `ros:humble-ros-base`.
+- Python ≥ 3.10; the host and CI toolchain uses 3.12. `pytest`, `PyYAML`.
 - No hardware for the mock and read-only offline paths; the vendor path requires
   the robot and separate authorization.
 
 ## 4. Quick start
 
 ```bash
-source /opt/ros/humble/setup.bash
+source /opt/ros/jazzy/setup.bash
 colcon build --base-paths ros2_ws/src
 source install/setup.bash
 

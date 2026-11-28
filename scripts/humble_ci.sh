@@ -1,17 +1,21 @@
 #!/usr/bin/env bash
-# Build and test jcheng-system in the laptop ROS 2 Humble container.
+# Robot-bound parity check: build and test jcheng-system in a ROS 2 Humble
+# container.
 #
-# CI (.github/workflows/ci.yml) builds every package under ros2_ws/src in
-# ros:humble-ros-base, then runs the gate for one milestone. This script does
-# the same in the local `armpi-humble-moveit` image, inside a disposable copy
-# of the repository: the host checkout keeps no Humble build/install artifacts
-# and no fetched interface package. CI remains the authority for published
-# artifacts; this is the local parity check.
+# The default ecosystem toolchain is ROS 2 Jazzy (see scripts/jazzy_ci.sh).
+# This script exists only for the ArmPi vendor runtime, which is Humble.
+# CI (.github/workflows/ci.yml) keeps exactly one Humble job (`m5-vendor`);
+# the m3/m4/m5-mock/m6 jobs run on Jazzy.
 #
-#   scripts/humble_ci.sh                  # m5-vendor (default)
-#   scripts/humble_ci.sh --job m3         # M3 gate + scenarios + lock check
-#   scripts/humble_ci.sh --job m4         # M4 read-only gate + short probe
-#   scripts/humble_ci.sh --job m5-mock    # M5.1 Mock transport
+# This script does the same as the Humble m5-vendor job in the local
+# `armpi-humble-moveit` image, inside a disposable copy of the repository: the
+# host checkout keeps no Humble build/install artifacts and no fetched
+# interface package. CI remains the authority for published artifacts.
+#
+#   scripts/humble_ci.sh                  # m5-vendor (default, Humble)
+#   scripts/humble_ci.sh --job m3         # Humble legacy parity (not CI-default)
+#   scripts/humble_ci.sh --job m4         # Humble legacy parity (not CI-default)
+#   scripts/humble_ci.sh --job m5-mock    # Humble legacy parity (not CI-default)
 #   scripts/humble_ci.sh --job m6         # replay/plan-only (no ROS build)
 #   scripts/humble_ci.sh --offline        # skip the remote tag check
 #

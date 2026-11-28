@@ -86,14 +86,15 @@ HTTP/CLI client
 
 ## 3. 依赖
 
-- 机器人：ROS 2 Humble；本机可用 Jazzy 构建。
-- Python ≥ 3.10、`pytest`、`PyYAML`。
+- 默认主机与 CI 工具链：ROS 2 Jazzy。机器人上的 ArmPi 厂商运行时仍是
+  ROS 2 Humble；只有机器人绑定的 `m5-vendor` 任务使用 `ros:humble-ros-base`。
+- Python ≥ 3.10；主机与 CI 工具链使用 3.12。`pytest`、`PyYAML`。
 - Mock 与只读离线路径不需要硬件；vendor 路径需要机器人与单独授权。
 
 ## 4. 快速开始
 
 ```bash
-source /opt/ros/humble/setup.bash
+source /opt/ros/jazzy/setup.bash
 colcon build --base-paths ros2_ws/src
 source install/setup.bash
 
