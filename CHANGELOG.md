@@ -8,6 +8,40 @@ All notable changes to this project are documented here. Format based on
 
 ### Added
 
+- R11 authority hardening (offline): `jcheng_system_core/hardware_authority.py`
+  is the single logical hardware exit. It owns the bridge and checks
+  contract, lease/holder/scope, deadman, stop latch, guard and limits before
+  `execute_arm`, `submit_base`, `stop` or `status`; unknown state fails closed.
+  `jcheng_vendor.executor.HardwareExecutor` now validates and writes through
+  it (HTTP behaviour unchanged). `authority.py` gains holder-validated
+  renew/release, `deadman_ms` tracking via `note_heartbeat`/`check`,
+  `SAFETY_HEARTBEAT_MISSING` rejection, and a revoke stop hook wired in the
+  vendor stack/node. `gateway.py` requires `holder`/`client_id` for lease
+  DELETE/renew (403 on missing/mismatch) and exempts `/v1/motion/stop` from the
+  motion rate limit so stop stays reachable after rate limiting or lease
+  expiry. New ROS-free `base.py` (BaseIntent/BaseCommand state machine,
+  DISABLED/IDLE/ARMED/MOVING/STOP_LATCHED/FAULT, default-off, configurable but
+  unverified 200 ms intent timeout) and `watchdog.py` (independent heartbeat
+  watchdog core with latched trip and stop callback). New pure
+  `vendor_gate.py` denies DDS `ExecuteMotion` unless
+  `JCHENG_ALLOW_DDS_EXECUTE=1`, domain 41, SROS2 enforced and the expected
+  topic; `jcheng_vendor/node.py` evaluates it before creating the retained
+  ActionServer. Tests: `test_hardware_authority.py`, `test_lease_holder.py`,
+  `test_base_authority.py`, `test_watchdog.py`, `test_dds_gate.py`.
+  `docs/AUTHORITY-HARDENING.md`. Offline only: no hardware, ROS, DDS or
+  `deploy/` change; 200/300 ms values are provisional and unverified.
+- R11 base intake (offline): new `jcheng_base` package with a thin,
+  `enabled=false`-by-default node on `/jcheng/intent/base` (domain 42). It
+  accepts exactly the mobile provisional envelope
+  `jcheng.mobile.base_intent.v1` (`schema`, `lease_id`, `holder`,
+  `command_id`, `seq`, `stamp_ns`, `frame`, nested `linear`/`angular`,
+  `duty_limit`) and rejects unknown schema/frame, flat/legacy shapes, bad
+  JSON, stale/future `stamp_ns`, bad lease/holder/scope and latched stops.
+  `jcheng_system_core/base_intake.py` holds the ROS-free parser/gate; the
+  node's default `UnavailableBaseBridge` refuses every motor-speed write
+  instead of fabricating one. No launch file enables it and `deploy/` is
+  untouched. Tests: `tests/test_base_intake.py` (21). The envelope is
+  repo-local and test-only, not a `jcheng-interfaces` contract.
 - R10 hardware gateway deployment: `deploy/armpi-ultra` gains a
   `jcheng-gateway-vendor.service` unit, run script and installer for the
   hardware-backed `/v1` gateway on loopback 8766. The vendor gateway startup
@@ -181,6 +215,12 @@ All notable changes to this project are documented here. Format based on
 
 ### Changed
 
+- R11 breaking client changes: `POST /v1/leases` defaults to
+  `deadman_required=true` and rejects an explicit false unless the server
+  opted out; `POST /v1/motion/execute` requires a `holder` matching the lease;
+  `DELETE /v1/leases/{id}` and `POST /v1/leases/{id}/renew` require `holder` or
+  `client_id` (body or query). Missing/mismatched holders return 403/422 as
+  applicable. Stop responses and motion success payloads are unchanged.
 - M4/M5 motion target (2026-11-26): the `jcheng_system_core` gateway with the
   M5.2 `jcheng_vendor` hardware executor. The frozen `armpi_debug_gateway` is
   legacy and not the motion authority; its R7 race is recorded but not fixed.
@@ -213,6 +253,24 @@ All notable changes to this project are documented here. Format based on
 
 ### Fixed
 
+- R11 QA authority gaps: lease issuing now requires deadman by default
+  (`deadman_required=true`, 300 ms provisional; `deadman_ms=0` rejected), with
+  opt-out only through `allow_deadman_opt_out=True`; motion checks reject a
+  missing holder with `NOT_LEASE_HOLDER` (legacy only through
+  `require_holder=False`); the vendor node gates all `/jcheng/authority/*`
+  services and `/jcheng/safety/arm|disarm|reset` behind the same
+  `vendor_gate` as `ExecuteMotion` (read-only validate/get_state/capabilities
+  remain); `BaseAuthority.tick` now zeroes and latches when the shared safety
+  stop or an unknown safety state is seen, even without a base intent.
+- R11 base intake unified lease: `BaseIntake` no longer accepts a second
+  process-local lease authority. It requires an injected `LeaseView` (or an
+  existing `BaseAuthority` whose view it reuses); `GatewayLeaseView` delegates
+  live checks to the same `LeaseManager` the gateway uses, so a gateway-issued
+  lease is accepted and a lease from a separate manager is rejected. The ROS
+  node adds `lease_source=gateway|none` (default `none`), never constructs a
+  `LeaseManager`, and fails closed with `RejectAllLeaseView` when no in-process
+  shared view is configured. Cross-process lease sharing remains a deployment
+  decision and is not implemented.
 - The previous gateway's `measured` field was a command cache
   (`/controller_manager/servo_states`) and differed from the real bus by up to
   387 pulses; the read-only path now uses an independent `GetBusServoState`

@@ -142,7 +142,13 @@ class MotionArbiter:
     def validate(self, command: MotionCommand, now: float | None = None) -> ValidationReport:
         now = self._now(now)
         guard = self.guard.enforce(self.safety, self.hardware.publishers)
-        lease = self.authority.check(command.lease_id, self.scope_for_kind(command.kind), now)
+        lease = self.authority.check(
+            command.lease_id,
+            self.scope_for_kind(command.kind),
+            now,
+            holder=command.holder or None,
+            touch=True,
+        )
         if not guard.ok:
             return self.safety.validate(command, False, ErrorCode.SAFETY_FAULT.value, now)
         return self.safety.validate(command, lease.ok, lease.code, now)
@@ -341,7 +347,10 @@ class MotionArbiter:
             self._clear_active(active)
             return result
         lease = self.authority.check(
-            command.lease_id, self.scope_for_kind(command.kind), now
+            command.lease_id,
+            self.scope_for_kind(command.kind),
+            now,
+            holder=command.holder or None,
         )
         if not lease.ok:
             message = lease.message or "lease lost during motion"
@@ -407,6 +416,7 @@ class MotionArbiter:
             active.command.lease_id,
             self.scope_for_kind(active.command.kind),
             now,
+            holder=active.command.holder or None,
         )
         if not lease.ok:
             message = lease.message or "lease expired or revoked"

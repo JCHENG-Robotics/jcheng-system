@@ -96,6 +96,9 @@ serve a contract hash that differs from `configs/contract.yaml`.
 The legacy `armpi-gateway-pose` and R10 both use 8766. Mask/stop the legacy
 unit before starting R10; the installer refuses while it is active.
 
+The legacy `armpi-gateway-pose` and R10 both use 8766. Mask/stop the legacy
+unit before starting R10; the installer refuses while it is active.
+
 Consequences:
 
 - **The container name is an interface.** Every script resolves `ArmPiUltra` by

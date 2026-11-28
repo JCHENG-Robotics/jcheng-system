@@ -122,7 +122,7 @@ def _arm_and_lease(profile, contract, safety, authority, scope: str = "arm"):
         mode="exclusive",
         priority=100,
         ttl_ms=30_000,
-        deadman_required=False,
+        deadman_required=True,
         contract=contract.version,
     )
 
@@ -133,6 +133,7 @@ def _gripper(contract, lease_id: str, position_rad: float) -> MotionCommand:
             "intent_id": "intent-gripper",
             "idempotency_key": "idem-gripper",
             "lease_id": lease_id,
+            "holder": "pytest",
             "source": "pytest",
             "kind": "GRIPPER",
             "profile": "gripper",
@@ -155,6 +156,7 @@ def _step(contract, lease_id: str, duration: float = 0.5) -> MotionCommand:
             "intent_id": "intent-step",
             "idempotency_key": "idem-step",
             "lease_id": lease_id,
+            "holder": "pytest",
             "source": "pytest",
             "kind": "JOINT_STEP",
             "profile": "step",

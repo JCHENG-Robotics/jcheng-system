@@ -77,6 +77,22 @@ def _status_for(code: str) -> int:
     return 400
 
 
+def _holder_from(
+    payload: dict[str, Any], query: dict[str, list[str]]
+) -> str:
+    """Read the holder assertion from a body or query string."""
+
+    for key in ("holder", "client_id"):
+        value = payload.get(key)
+        if value is not None and str(value).strip():
+            return str(value)
+    for key in ("holder", "client_id"):
+        value = query.get(key, [""])[0]
+        if value.strip():
+            return value
+    return ""
+
+
 class GatewayApp:
     def __init__(
         self,
@@ -176,7 +192,11 @@ class GatewayApp:
         if not self._auth(headers):
             return 401, self._error(ErrorCode.UNAUTHORIZED.value, "missing or invalid token")
         try:
-            self._rate(headers)
+            # The stop path is always reachable: a stop is not a motion
+            # request and must not be rejected by the motion rate limit, lease
+            # expiry or any other ordinary motion gate.
+            if not (method == "POST" and path == "/v1/motion/stop"):
+                self._rate(headers)
             return self._route(method, path, query, headers, body)
         except MotionRejected as exc:
             return _status_for(exc.code), self._error(exc.code, exc.message, {"violations": exc.violations})
@@ -241,9 +261,17 @@ class GatewayApp:
                 mode=str(payload["mode"]),
                 priority=int(payload["priority"]),
                 ttl_ms=int(payload["ttl_ms"]),
-                deadman_required=bool(payload.get("deadman_required", False)),
+                # Deadman is required by default for issued leases. A client
+                # can only opt out through an explicitly configured manager
+                # (allow_deadman_opt_out) and an explicit false value.
+                deadman_required=bool(payload.get("deadman_required", True)),
                 contract=self._contract(payload["contract"]),
                 now=now,
+                deadman_ms=(
+                    int(payload["deadman_ms"])
+                    if payload.get("deadman_ms") is not None
+                    else None
+                ),
             )
             return 200, lease.to_dict(stack.clock)
         if path.startswith("/v1/leases/"):
@@ -251,14 +279,30 @@ class GatewayApp:
             if len(parts) >= 3:
                 lease_id = parts[2]
                 if method == "DELETE" and len(parts) == 3:
-                    return 200, {"released": stack.authority.release(lease_id)}
+                    payload = self._body(body) if body else {}
+                    holder = _holder_from(payload, query)
+                    if not holder:
+                        raise MotionRejected(
+                            ErrorCode.FORBIDDEN,
+                            "holder or client_id is required to release a lease",
+                        )
+                    return 200, {
+                        "released": stack.authority.release(lease_id, holder=holder)
+                    }
                 if method == "POST" and len(parts) == 4 and parts[3] == "renew":
                     payload = self._body(body)
+                    holder = _holder_from(payload, query)
+                    if not holder:
+                        raise MotionRejected(
+                            ErrorCode.FORBIDDEN,
+                            "holder or client_id is required to renew a lease",
+                        )
                     lease = stack.authority.renew(
                         lease_id,
                         int(payload["ttl_ms"]),
                         self._contract(payload["contract"]),
                         now,
+                        holder=holder,
                     )
                     return 200, lease.to_dict(stack.clock)
                 if method == "POST" and len(parts) == 4 and parts[3] == "revoke":

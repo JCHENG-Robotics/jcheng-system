@@ -140,9 +140,16 @@ def s3_lease_lifecycle(root: Path) -> ScenarioResult:
     lease = stack.lease(holder="alice", scope="arm", priority=60, ttl_ms=1000)
     renewed = stack.authority.renew(lease.lease_id, 2000, stack.version)
     _assert(renewed.expires_at > lease.expires_at, "renew did not extend the lease")
-    _assert(stack.authority.check(lease.lease_id, "arm", stack.clock.now()).ok, "lease should be valid")
+    _assert(
+        stack.authority.check(
+            lease.lease_id, "arm", stack.clock.now(), require_holder=False
+        ).ok,
+        "lease should be valid",
+    )
     _assert(stack.authority.release(lease.lease_id), "release failed")
-    check = stack.authority.check(lease.lease_id, "arm", stack.clock.now())
+    check = stack.authority.check(
+        lease.lease_id, "arm", stack.clock.now(), require_holder=False
+    )
     _assert(not check.ok, "released lease must not be valid")
     events = {item["event"] for item in stack.authority.events}
     _assert({"lease_acquired", "lease_renewed", "lease_released"} <= events, str(events))
@@ -152,10 +159,25 @@ def s3_lease_lifecycle(root: Path) -> ScenarioResult:
 def s4_lease_contention(root: Path) -> ScenarioResult:
     stack = MockStack.build(root, clock=ManualClock())
     low = stack.lease(holder="low", scope="arm", priority=40, ttl_ms=5000)
-    _assert(stack.authority.check(low.lease_id, "arm", stack.clock.now()).ok, "low lease should start valid")
+    _assert(
+        stack.authority.check(
+            low.lease_id, "arm", stack.clock.now(), require_holder=False
+        ).ok,
+        "low lease should start valid",
+    )
     high = stack.lease(holder="high", scope="arm", priority=60, ttl_ms=5000)
-    _assert(not stack.authority.check(low.lease_id, "arm", stack.clock.now()).ok, "low lease should be preempted")
-    _assert(stack.authority.check(high.lease_id, "arm", stack.clock.now()).ok, "high lease should be valid")
+    _assert(
+        not stack.authority.check(
+            low.lease_id, "arm", stack.clock.now(), require_holder=False
+        ).ok,
+        "low lease should be preempted",
+    )
+    _assert(
+        stack.authority.check(
+            high.lease_id, "arm", stack.clock.now(), require_holder=False
+        ).ok,
+        "high lease should be valid",
+    )
     events = {item["event"] for item in stack.authority.events}
     _assert("lease_preempted" in events, str(events))
     return ScenarioResult("S4", "lease contention and preemption", "pass", "higher priority preempted lower")

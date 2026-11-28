@@ -22,6 +22,7 @@ from jcheng_system_core.authority import LeaseManager
 from jcheng_system_core.config import ContractConfig, RobotProfile, load_contract
 from jcheng_system_core.evidence import EvidenceStore
 from jcheng_system_core.guard import PublisherGuard
+from jcheng_system_core.hardware_authority import HardwareAuthority
 from jcheng_system_core.models import ContractVersion, MotionCommand
 from jcheng_system_core.safety import SafetyLimits, SafetySupervisor
 from jcheng_system_core.timebase import Clock, ManualClock
@@ -89,6 +90,7 @@ class VendorStack:
     arbiter: HardwareExecutor
     mode: str = "hardware"
     capabilities: tuple[str, ...] = ("hardware",)
+    hardware_authority: HardwareAuthority | None = None
 
     @property
     def version(self) -> ContractVersion:
@@ -103,6 +105,8 @@ class VendorStack:
         evidence_path: str | Path | None = None,
         robot: str = "armpi_ultra",
         settle_s: float = 0.4,
+        allow_deadman_opt_out: bool = False,
+        require_holder: bool = True,
     ) -> "VendorStack":
         root = Path(root)
         clock = clock or Clock()
@@ -112,10 +116,26 @@ class VendorStack:
         overlay = profile_dir / "safety_overlay.yaml"
         limits = SafetyLimits.from_file(overlay) if overlay.is_file() else SafetyLimits()
         safety = SafetySupervisor(profile, contract.version, clock, limits)
-        authority = LeaseManager(contract.version, clock)
+        authority = LeaseManager(
+            contract.version,
+            clock,
+            allow_deadman_opt_out=allow_deadman_opt_out,
+            require_holder=require_holder,
+        )
         guard = PublisherGuard()
         evidence = EvidenceStore(clock, evidence_path)
         hardware = VendorGatewayHardware(bridge)
+        hardware_authority = HardwareAuthority(
+            contract=contract.version,
+            authority=authority,
+            safety=safety,
+            clock=clock,
+            bridge=hardware,
+            guard=guard,
+            max_base_duty=float(
+                profile.profiles.get("base", {}).get("max_abs_duty_normalized", 0.10)
+            ),
+        )
         arbiter = HardwareExecutor(
             profile=profile,
             contract=contract.version,
@@ -126,6 +146,14 @@ class VendorStack:
             evidence=evidence,
             bridge=hardware,
             settle_s=settle_s,
+            hardware_authority=hardware_authority,
+        )
+        # Revoking a lease also stops: the executor latches safety, holds the
+        # arm through the hardware authority and zeroes any base output.
+        authority.set_stop_hook(
+            lambda lease_id, reason: arbiter.stop(
+                "lease_revoke", f"{lease_id}: {reason}"
+            )
         )
         return cls(
             profile=profile,
@@ -137,6 +165,7 @@ class VendorStack:
             guard=guard,
             evidence=evidence,
             arbiter=arbiter,
+            hardware_authority=hardware_authority,
         )
 
     def sync_state(self) -> None:
@@ -158,7 +187,7 @@ class VendorStack:
         scope: str = "arm",
         priority: int = 100,
         ttl_ms: int = 30_000,
-        deadman_required: bool = False,
+        deadman_required: bool | None = True,
     ):
         return self.authority.acquire(
             holder=holder,
@@ -171,10 +200,14 @@ class VendorStack:
         )
 
     def command(self, lease_id: str | None = None, **overrides: Any) -> MotionCommand:
+        holder = overrides.pop("holder", None)
+        if holder is None and lease_id:
+            holder = self.authority.holder_for(lease_id) or ""
         base = {
             "intent_id": f"intent-{uuid.uuid4().hex[:8]}",
             "idempotency_key": f"idem-{uuid.uuid4().hex[:8]}",
             "lease_id": lease_id or "",
+            "holder": holder or "",
             "source": "jcheng_vendor_gateway",
             "kind": "JOINT_STEP",
             "profile": "step",

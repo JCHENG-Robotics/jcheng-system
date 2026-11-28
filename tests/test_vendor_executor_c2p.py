@@ -118,7 +118,7 @@ def _setup():
         mode="exclusive",
         priority=100,
         ttl_ms=30_000,
-        deadman_required=False,
+        deadman_required=True,
         contract=contract.version,
     )
     executor = HardwareExecutor(
@@ -137,6 +137,7 @@ def _setup():
             "intent_id": "intent-c2p",
             "idempotency_key": "idem-c2p",
             "lease_id": lease.lease_id,
+            "holder": "operator",
             "source": "test",
             "kind": "JOINT_STEP",
             "profile": "step",

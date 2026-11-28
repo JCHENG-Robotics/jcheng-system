@@ -67,10 +67,15 @@ class RuntimeNode(Node):
         root_value = str(self.get_parameter("root").value or os.environ.get("JCHENG_ROOT", ""))
         root = Path(root_value).expanduser() if root_value else find_repo_root()
         evidence = str(self.get_parameter("evidence_path").value or "") or None
+        # M5.1 mock/legacy transport: interface commands carry no holder field
+        # and its tests intentionally use non-deadman leases. This is an
+        # explicit opt-out of the hardened defaults, not the production path.
         self.stack = MockStack.build(
             root,
             evidence_path=evidence,
             robot=str(self.get_parameter("robot").value or "armpi_ultra"),
+            allow_deadman_opt_out=True,
+            require_holder=False,
         )
         self._sim_context = None
         self._sim_node = None
