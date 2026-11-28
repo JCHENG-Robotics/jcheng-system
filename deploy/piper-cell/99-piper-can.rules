@@ -1,0 +1,5 @@
+# JCHENG: Piper leader/follower USB-CAN adapters pinned by adapter serial.
+# leader  : USB path 1-4.4.3, serial 002900324148570B20343133 (right arm, teach)
+# follower: USB path 1-4.4.4, serial 0042001F4648571220363032 (left arm, output)
+ACTION=="add", SUBSYSTEM=="net", ATTRS{serial}=="002900324148570B20343133", NAME="can_leader1"
+ACTION=="add", SUBSYSTEM=="net", ATTRS{serial}=="0042001F4648571220363032", NAME="can_follower1"

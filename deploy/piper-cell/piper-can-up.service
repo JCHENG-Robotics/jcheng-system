@@ -1,0 +1,12 @@
+[Unit]
+Description=JCHENG: bring up Piper CAN interfaces at 1Mbps
+After=systemd-udev-settle.service network-pre.target
+Wants=systemd-udev-settle.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/bash -c 'for i in $(seq 1 30); do [ -e /sys/class/net/can_leader1 ] && [ -e /sys/class/net/can_follower1 ] && break; sleep 1; done; for i in can_leader1 can_follower1; do ip link set "$i" down 2>/dev/null || true; ip link set "$i" up type can bitrate 1000000; done'
+
+[Install]
+WantedBy=multi-user.target
